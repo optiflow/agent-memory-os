@@ -32,6 +32,8 @@ docs               Architecture, roadmap, evaluation, and install notes
 ```bash
 pnpm install
 pnpm lint
+pnpm lint:packages
+pnpm lint:repo
 pnpm typecheck
 pnpm test
 pnpm build

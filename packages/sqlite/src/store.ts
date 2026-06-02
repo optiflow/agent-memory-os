@@ -43,9 +43,22 @@ function numberValue(row: Record<string, unknown>, key: string): number {
   return value;
 }
 
-function toFtsQuery(query: string): string {
+function toFtsQuery(query: string): string | undefined {
   const tokens = query.match(/[A-Za-z0-9_]+/g) ?? [];
-  return tokens.length > 0 ? tokens.join(" OR ") : "*";
+
+  if (tokens.length === 0) {
+    return undefined;
+  }
+
+  return tokens.map((token) => `"${token}"`).join(" OR ");
+}
+
+function normalizeLimit(limit: number): number {
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return 0;
+  }
+
+  return Math.floor(limit);
 }
 
 export class SQLiteMemoryStore implements MemoryStore {
@@ -162,7 +175,18 @@ export class SQLiteMemoryStore implements MemoryStore {
   }
 
   async search(query: string, limit = 10): Promise<SearchResult[]> {
+    const normalizedLimit = normalizeLimit(limit);
+
+    if (normalizedLimit === 0) {
+      return [];
+    }
+
     const ftsQuery = toFtsQuery(query);
+
+    if (!ftsQuery) {
+      return [];
+    }
+
     const evidenceRows = this.database
       .prepare(
         `SELECT evidence_events.id, evidence_events.kind, evidence_events.content,
@@ -173,7 +197,7 @@ export class SQLiteMemoryStore implements MemoryStore {
          ORDER BY rank ASC
          LIMIT ?`,
       )
-      .all(ftsQuery, limit);
+      .all(ftsQuery, normalizedLimit);
     const factRows = this.database
       .prepare(
         `SELECT semantic_facts.id, semantic_facts.subject, semantic_facts.predicate,
@@ -185,7 +209,7 @@ export class SQLiteMemoryStore implements MemoryStore {
          ORDER BY rank ASC
          LIMIT ?`,
       )
-      .all(ftsQuery, limit);
+      .all(ftsQuery, normalizedLimit);
 
     return [
       ...evidenceRows.map((row) => ({
@@ -210,8 +234,9 @@ export class SQLiteMemoryStore implements MemoryStore {
         };
       }),
     ]
-      .toSorted((left, right) => right.score - left.score)
-      .slice(0, limit);
+      .slice()
+      .sort((left, right) => right.score - left.score)
+      .slice(0, normalizedLimit);
   }
 
   async recordVerification(record: VerificationRecord): Promise<VerificationRecord> {

@@ -6,6 +6,8 @@ The repo should pass:
 
 ```bash
 pnpm lint
+pnpm lint:packages
+pnpm lint:repo
 pnpm typecheck
 pnpm test
 pnpm build

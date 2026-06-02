@@ -56,4 +56,24 @@ describe("SQLiteMemoryStore", () => {
 
     store.close();
   });
+
+  it("returns no search results for empty FTS input or non-positive limits", async () => {
+    const store = new SQLiteMemoryStore();
+
+    try {
+      await store.appendEvidence({
+        id: "event_1",
+        kind: "explicit_memory",
+        actor: "user",
+        content: "The user prefers Biome over ESLint and Prettier.",
+        timestamp: "2026-06-02T00:00:00.000Z",
+        scope: { type: "workspace", id: "agent-memory-os" },
+      });
+
+      await expect(store.search("?!?", 5)).resolves.toEqual([]);
+      await expect(store.search("Biome", 0)).resolves.toEqual([]);
+    } finally {
+      store.close();
+    }
+  });
 });

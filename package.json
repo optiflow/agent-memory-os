@@ -5,13 +5,15 @@
   "type": "module",
   "packageManager": "pnpm@11.2.2",
   "scripts": {
-    "adapter:check": "python3 -m py_compile adapters/hermes/plugins/memory/meta_memory/__init__.py",
+    "adapter:check": "python3 -m py_compile adapters/hermes/plugins/memory/meta_memory/__init__.py adapters/hermes/plugins/memory/meta_memory/test/test_provider.py && python3 -m unittest discover adapters/hermes/plugins/memory/meta_memory/test",
     "build": "turbo run build",
     "ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm adapter:check",
     "clean": "turbo run clean",
     "format": "biome format --write .",
     "hooks:install": "lefthook install",
-    "lint": "turbo run lint",
+    "lint": "pnpm lint:packages && pnpm lint:repo",
+    "lint:packages": "turbo run lint",
+    "lint:repo": "biome check .",
     "prepare": "lefthook install",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"

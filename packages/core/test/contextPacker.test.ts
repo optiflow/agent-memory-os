@@ -43,4 +43,25 @@ describe("createContextPack", () => {
   it("returns a positive token estimate for empty strings", () => {
     expect(estimateTokens("")).toBe(1);
   });
+
+  it("treats invalid result bounds as an empty pack", () => {
+    const pack = createContextPack(
+      "bounds",
+      [
+        {
+          id: "fact_1",
+          kind: "fact",
+          content: "A result that should be excluded by maxResults.",
+          score: 1,
+          citation: "fact:fact_1",
+        },
+      ],
+      [],
+      [],
+      { budgetTokens: 100, maxResults: -1 },
+    );
+
+    expect(pack.items).toEqual([]);
+    expect(pack.estimatedTokens).toBe(0);
+  });
 });

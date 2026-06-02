@@ -10,39 +10,135 @@ import type {
 import { createVerificationRecord, DefaultContextRouter } from "@agent-memory-os/core";
 import { SQLiteMemoryStore } from "@agent-memory-os/sqlite";
 
-export type CommandName = "context-pack" | "remember" | "search" | "seed-sample" | "verify";
+const COMMAND_NAMES = ["context-pack", "remember", "search", "seed-sample", "verify"] as const;
+const EVIDENCE_KINDS = [
+  "assistant_message",
+  "explicit_memory",
+  "file_edit",
+  "system_event",
+  "tool_call",
+  "tool_result",
+  "user_message",
+] as const satisfies readonly EvidenceKind[];
+const MEMORY_SCOPE_TYPES = [
+  "global",
+  "project",
+  "session",
+  "user",
+  "workspace",
+] as const satisfies readonly MemoryScope["type"][];
+const VERIFICATION_STATUSES = [
+  "failed",
+  "passed",
+  "stale",
+  "unknown",
+  "warning",
+] as const satisfies readonly VerificationStatus[];
+const EVIDENCE_ACTORS = [
+  "assistant",
+  "system",
+  "tool",
+  "user",
+] as const satisfies readonly EvidenceEvent["actor"][];
+
+export type CommandName = (typeof COMMAND_NAMES)[number];
 
 export interface CommandInput {
   dbPath?: string;
   [key: string]: unknown;
 }
 
+function isOneOf<const Values extends readonly string[]>(
+  values: Values,
+  value: unknown,
+): value is Values[number] {
+  return typeof value === "string" && values.includes(value);
+}
+
+export function parseCommandName(value: string | undefined): CommandName {
+  if (isOneOf(COMMAND_NAMES, value)) {
+    return value;
+  }
+
+  if (value) {
+    throw new Error(`Unknown command "${value}"`);
+  }
+
+  throw new Error(`Usage: meta-memory <${COMMAND_NAMES.join("|")}>`);
+}
+
 function requireString(input: CommandInput, key: string): string {
   const value = input[key];
 
-  if (typeof value !== "string" || value.length === 0) {
+  if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`Expected "${key}" to be a non-empty string`);
   }
 
   return value;
 }
 
-function optionalNumber(input: CommandInput, key: string, fallback: number): number {
+function optionalPositiveInteger(input: CommandInput, key: string, fallback: number): number {
   const value = input[key];
 
   if (value === undefined) {
     return fallback;
   }
 
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new Error(`Expected "${key}" to be a number`);
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
+    throw new Error(`Expected "${key}" to be a positive integer`);
   }
 
   return value;
 }
 
+function optionalEvidenceKind(input: CommandInput): EvidenceKind {
+  const value = input.kind;
+
+  if (value === undefined) {
+    return "explicit_memory";
+  }
+
+  if (isOneOf(EVIDENCE_KINDS, value)) {
+    return value;
+  }
+
+  throw new Error('Expected "kind" to be a supported evidence kind');
+}
+
+function optionalActor(input: CommandInput): EvidenceEvent["actor"] {
+  const value = input.actor;
+
+  if (value === undefined) {
+    return "user";
+  }
+
+  if (isOneOf(EVIDENCE_ACTORS, value)) {
+    return value;
+  }
+
+  throw new Error('Expected "actor" to be assistant, system, tool, or user');
+}
+
+function optionalVerificationStatus(input: CommandInput): VerificationStatus {
+  const value = input.status;
+
+  if (value === undefined) {
+    return "unknown";
+  }
+
+  if (isOneOf(VERIFICATION_STATUSES, value)) {
+    return value;
+  }
+
+  throw new Error('Expected "status" to be a supported verification status');
+}
+
 function defaultScope(input: CommandInput): MemoryScope {
   const scope = input.scope;
+
+  if (scope === undefined) {
+    return { type: "workspace", id: "default" };
+  }
 
   if (
     typeof scope === "object" &&
@@ -52,10 +148,18 @@ function defaultScope(input: CommandInput): MemoryScope {
     typeof scope.type === "string" &&
     typeof scope.id === "string"
   ) {
-    return { type: scope.type as MemoryScope["type"], id: scope.id };
+    if (!isOneOf(MEMORY_SCOPE_TYPES, scope.type)) {
+      throw new Error('Expected "scope.type" to be a supported memory scope type');
+    }
+
+    if (scope.id.trim().length === 0) {
+      throw new Error('Expected "scope.id" to be a non-empty string');
+    }
+
+    return { type: scope.type, id: scope.id };
   }
 
-  return { type: "workspace", id: "default" };
+  throw new Error('Expected "scope" to include string "type" and "id" fields');
 }
 
 function optionalMetadata(input: CommandInput): Metadata | undefined {
@@ -81,8 +185,8 @@ export async function runCommand(command: CommandName, input: CommandInput): Pro
     if (command === "remember") {
       const event: EvidenceEvent = {
         id: `event_${crypto.randomUUID()}`,
-        kind: (input.kind as EvidenceKind | undefined) ?? "explicit_memory",
-        actor: "actor" in input && input.actor === "assistant" ? "assistant" : "user",
+        kind: optionalEvidenceKind(input),
+        actor: optionalActor(input),
         content: requireString(input, "content"),
         timestamp: new Date().toISOString(),
         scope: defaultScope(input),
@@ -96,7 +200,7 @@ export async function runCommand(command: CommandName, input: CommandInput): Pro
       return {
         results: await store.search(
           requireString(input, "query"),
-          optionalNumber(input, "limit", 10),
+          optionalPositiveInteger(input, "limit", 10),
         ),
       };
     }
@@ -108,7 +212,7 @@ export async function runCommand(command: CommandName, input: CommandInput): Pro
         contextPack: await router.pack({
           query: requireString(input, "query"),
           scope: defaultScope(input),
-          budgetTokens: optionalNumber(input, "budgetTokens", 1200),
+          budgetTokens: optionalPositiveInteger(input, "budgetTokens", 1200),
         }),
       };
     }
@@ -116,7 +220,7 @@ export async function runCommand(command: CommandName, input: CommandInput): Pro
     if (command === "verify") {
       const record = createVerificationRecord({
         targetId: requireString(input, "targetId"),
-        status: (input.status as VerificationStatus | undefined) ?? "unknown",
+        status: optionalVerificationStatus(input),
         message: requireString(input, "message"),
       });
 
@@ -158,4 +262,10 @@ export async function runCommand(command: CommandName, input: CommandInput): Pro
   } finally {
     store.close();
   }
+
+  return assertNever(command);
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unknown command "${String(value)}"`);
 }

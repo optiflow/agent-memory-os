@@ -9,6 +9,14 @@ import type {
 const DEFAULT_BUDGET_TOKENS = 1200;
 const DEFAULT_MAX_RESULTS = 12;
 
+function normalizeNonNegativeInteger(value: number): number {
+  if (!Number.isFinite(value) || value < 0) {
+    return 0;
+  }
+
+  return Math.floor(value);
+}
+
 export function estimateTokens(text: string): number {
   return Math.max(1, Math.ceil(text.length / 4));
 }
@@ -20,8 +28,8 @@ export function createContextPack(
   verificationWarnings: VerificationRecord[],
   options: Partial<ContextPackOptions> = {},
 ): ContextPack {
-  const budgetTokens = options.budgetTokens ?? DEFAULT_BUDGET_TOKENS;
-  const maxResults = options.maxResults ?? DEFAULT_MAX_RESULTS;
+  const budgetTokens = normalizeNonNegativeInteger(options.budgetTokens ?? DEFAULT_BUDGET_TOKENS);
+  const maxResults = normalizeNonNegativeInteger(options.maxResults ?? DEFAULT_MAX_RESULTS);
   const includeCore = options.includeCore ?? true;
   const candidates: SearchResult[] = [];
 
@@ -42,7 +50,8 @@ export function createContextPack(
   candidates.push(...searchResults);
 
   const ordered = candidates
-    .toSorted((left, right) => {
+    .slice()
+    .sort((left, right) => {
       if (right.score !== left.score) {
         return right.score - left.score;
       }
@@ -52,7 +61,7 @@ export function createContextPack(
     .slice(0, maxResults);
 
   let estimatedTokens = 0;
-  const items = [];
+  const items: ContextPack["items"] = [];
 
   for (const item of ordered) {
     const tokenEstimate = estimateTokens(item.content);

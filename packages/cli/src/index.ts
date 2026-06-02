@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import type { CommandInput, CommandName } from "./commands.js";
-import { runCommand } from "./commands.js";
+import type { CommandInput } from "./commands.js";
+import { parseCommandName, runCommand } from "./commands.js";
 
 async function readStdin(): Promise<string> {
   let body = "";
@@ -12,15 +12,25 @@ async function readStdin(): Promise<string> {
   return body;
 }
 
-async function main(): Promise<void> {
-  const command = process.argv[2] as CommandName | undefined;
-
-  if (!command) {
-    throw new Error("Usage: meta-memory <remember|search|context-pack|verify|seed-sample>");
+function parseCommandInput(body: string): CommandInput {
+  if (body.trim().length === 0) {
+    return {};
   }
 
+  const input = JSON.parse(body) as unknown;
+
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    throw new Error("Expected stdin JSON to be an object");
+  }
+
+  return input as CommandInput;
+}
+
+async function main(): Promise<void> {
+  const command = parseCommandName(process.argv[2]);
+
   const body = await readStdin();
-  const input = body.trim().length > 0 ? (JSON.parse(body) as CommandInput) : {};
+  const input = parseCommandInput(body);
   const output = await runCommand(command, input);
 
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);

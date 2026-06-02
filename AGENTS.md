@@ -12,12 +12,14 @@
 
 - Install: `pnpm install`
 - Lint: `pnpm lint`
+- Package lint: `pnpm lint:packages`
+- Repo-wide lint: `pnpm lint:repo`
 - Format: `pnpm format`
 - Typecheck: `pnpm typecheck`
 - Test: `pnpm test`
 - Build: `pnpm build`
 - Full local gate: `pnpm run ci`
-- Hermes adapter smoke check: `pnpm adapter:check`
+- Hermes adapter compile and unit tests: `pnpm adapter:check`
 - Install git hooks: `pnpm hooks:install`
 
 ## Verification
