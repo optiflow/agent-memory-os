@@ -1,0 +1,9 @@
+{
+  "dbPath": "./memory.sqlite",
+  "content": "User prefers Biome as the only linter and formatter.",
+  "kind": "explicit_memory",
+  "scope": {
+    "type": "workspace",
+    "id": "agent-memory-os"
+  }
+}

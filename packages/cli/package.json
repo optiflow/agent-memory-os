@@ -1,0 +1,28 @@
+{
+  "name": "@agent-memory-os/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "meta-memory": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "lint": "biome check .",
+    "test": "vitest run test",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@agent-memory-os/core": "workspace:*",
+    "@agent-memory-os/sqlite": "workspace:*"
+  }
+}

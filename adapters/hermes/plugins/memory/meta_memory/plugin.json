@@ -1,0 +1,6 @@
+{
+  "name": "meta_memory",
+  "display_name": "Agent Memory OS",
+  "description": "Local-first meta memory provider backed by the agent-memory-os TypeScript CLI.",
+  "provider_class": "MetaMemoryProvider"
+}

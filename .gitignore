@@ -1,0 +1,13 @@
+.DS_Store
+.pnpm-store/
+.turbo/
+node_modules/
+
+dist/
+*.tsbuildinfo
+
+__pycache__/
+*.py[cod]
+
+*.sqlite
+*.sqlite-*

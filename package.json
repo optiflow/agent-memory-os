@@ -1,0 +1,31 @@
+{
+  "name": "agent-memory-os",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.2.2",
+  "scripts": {
+    "adapter:check": "python3 -m py_compile adapters/hermes/plugins/memory/meta_memory/__init__.py",
+    "build": "turbo run build",
+    "ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm adapter:check",
+    "clean": "turbo run clean",
+    "format": "biome format --write .",
+    "hooks:install": "lefthook install",
+    "lint": "turbo run lint",
+    "prepare": "lefthook install",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.16",
+    "@types/node": "24.12.4",
+    "lefthook": "1.13.6",
+    "turbo": "2.9.16",
+    "typescript": "5.9.3",
+    "vitest": "4.1.7"
+  },
+  "engines": {
+    "node": ">=22.5.0",
+    "pnpm": ">=10"
+  }
+}
