@@ -46,6 +46,10 @@ Lefthook runs the pre-commit git gate. Install hooks with:
 pnpm hooks:install
 ```
 
+## Current Docs
+
+Context7 MCP is registered globally for Codex as `context7` so coding agents can fetch current framework/library documentation. See [docs/context7-mcp.md](docs/context7-mcp.md) for the repo-specific usage policy and relevant documentation targets.
+
 ## Example
 
 ```bash
