@@ -102,6 +102,9 @@
 ## Commands
 
 - Install: `pnpm install`
+- Create a changeset: `pnpm changeset`
+- Apply pending changesets to versions and changelogs:
+  `pnpm changeset:version`
 - Lint: `pnpm lint`
 - Package lint: `pnpm lint:packages`
 - Repo-wide lint: `pnpm lint:repo`
@@ -119,6 +122,29 @@
 - Full local gate: `pnpm run ci`
 - Hermes adapter compile and unit tests: `pnpm adapter:check`
 - Install git hooks: `pnpm hooks:install`
+- Release metadata warning check: `pnpm release:check`
+- Create GitHub release from `CHANGELOG.md`: `pnpm release:github`
+
+## Release Workflow
+
+- Releases are repository-level GitHub Releases only. Do not add npm publishing
+  or `NPM_TOKEN` requirements unless explicitly requested.
+- Significant changes or improvements require a changeset targeting
+  `agent-memory-os`. Use `pnpm changeset`, then choose the smallest valid semver
+  bump: patch for fixes and docs/tooling polish, minor for new capabilities, and
+  major only for breaking public behavior.
+- Non-release PRs should include `[no release]` in the PR title or body. Use it
+  for chore-only changes, CI experiments, or edits that should not become release
+  notes.
+- The release metadata workflow is warning-only. Treat warnings as review input,
+  not a failing gate.
+- The release workflow runs after the `CI` workflow succeeds on `main`.
+  `changesets/action` opens or updates the `Version Agent Memory OS` PR while
+  changesets are pending. After that version PR merges, the workflow runs
+  `pnpm release:github` and creates `Agent Memory OS vX.Y.Z` from the matching
+  root `CHANGELOG.md` section.
+- Do not manually edit generated version PR contents unless fixing the release
+  metadata itself. Prefer adding or amending changesets in feature PRs.
 
 ## Verification
 

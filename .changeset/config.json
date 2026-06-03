@@ -1,0 +1,27 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config/schema.json",
+  "access": "restricted",
+  "baseBranch": "main",
+  "changelog": [
+    "@changesets/changelog-github",
+    {
+      "repo": "optiflow/agent-memory-os"
+    }
+  ],
+  "commit": false,
+  "fixed": [],
+  "ignore": [
+    "@agent-memory-os/cli",
+    "@agent-memory-os/core",
+    "@agent-memory-os/docs",
+    "@agent-memory-os/docs-guard",
+    "@agent-memory-os/evals",
+    "@agent-memory-os/sqlite"
+  ],
+  "linked": [],
+  "privatePackages": {
+    "tag": false,
+    "version": true
+  },
+  "updateInternalDependencies": "patch"
+}

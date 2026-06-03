@@ -32,7 +32,7 @@ The full gate runs documentation freshness checks, linting, typechecking,
 tests, builds, adapter-boundary checks, deterministic evals, and report-only
 benchmarks.
 
-For narrower checks, see [Evaluation](../reference/evaluation.md).
+For narrower checks, see [Evaluation](../../reference/evaluation/).
 
 ## CLI Smoke Test
 
@@ -71,7 +71,7 @@ skills             Bundled Hermes setup runbook
 
 ## Next Reads
 
-- [CLI Reference](../reference/cli-reference.md) for command contracts.
-- [Architecture](../architecture/architecture.md) for memory planes and routing.
-- [Hermes Install Notes](../integrations/hermes-install.md) for adapter setup.
-- [Evaluation](../reference/evaluation.md) for local acceptance gates.
+- [CLI Reference](../../reference/cli-reference/) for command contracts.
+- [Architecture](../../architecture/architecture/) for memory planes and routing.
+- [Hermes Install Notes](../../integrations/hermes-install/) for adapter setup.
+- [Evaluation](../../reference/evaluation/) for local acceptance gates.

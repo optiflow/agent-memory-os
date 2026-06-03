@@ -38,6 +38,7 @@ export function runDocsGuard(options: DocsGuardOptions): DocsGuardResult {
     ...validateChangedFileRules(changedFiles),
     ...validateWikiJson(options.repoRoot),
     ...validateRootDocsReferences(options.repoRoot),
+    ...validateStarlightSourceLinks(options.repoRoot),
   ];
 
   return {
@@ -304,6 +305,35 @@ function validateRootDocsReferences(repoRoot: string): string[] {
   return errors;
 }
 
+function validateStarlightSourceLinks(repoRoot: string): string[] {
+  const docsPath = join(repoRoot, STARLIGHT_DOCS_PREFIX);
+  if (!existsSync(docsPath)) {
+    return [];
+  }
+
+  const errors: string[] = [];
+  const markdownLinkPattern = /(?<!!)\[[^\]\n]+\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
+
+  for (const filePath of walkFiles(docsPath, repoRoot).filter((file) => file.endsWith(".md"))) {
+    const content = readFileSync(join(repoRoot, filePath), "utf8");
+    for (const match of content.matchAll(markdownLinkPattern)) {
+      const rawTarget = match[1]?.trim().replace(/^<|>$/g, "");
+      if (!rawTarget || isExternalLink(rawTarget) || rawTarget.startsWith("#")) {
+        continue;
+      }
+
+      const targetPath = rawTarget.split("#")[0]?.split("?")[0] ?? "";
+      if (/\.(md|mdb)$/i.test(targetPath)) {
+        errors.push(
+          `Starlight source link "${rawTarget}" in ${filePath} points at a source file. Use the published route path instead.`,
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
 function docsReferenceScanFiles(repoRoot: string): string[] {
   const files: string[] = [];
 
@@ -386,6 +416,10 @@ function isToolingOrPolicyChange(file: string): boolean {
     file.startsWith(".github/workflows/") ||
     file.startsWith("packages/docs-guard/")
   );
+}
+
+function isExternalLink(linkTarget: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:/i.test(linkTarget) || linkTarget.startsWith("//");
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

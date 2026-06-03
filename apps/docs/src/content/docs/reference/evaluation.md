@@ -46,6 +46,7 @@ pnpm build
 pnpm adapter:check
 pnpm docs:check
 pnpm docs:build
+pnpm release:check
 ```
 
 ## Documentation Freshness
@@ -59,7 +60,7 @@ pnpm docs:check
 The guard fails when code, adapter, tooling, workflow, or policy changes land
 without the matching documentation surface in the same diff. It checks changed
 paths, validates `.devin/wiki.json`, and rejects stale canonical references to
-deleted root `docs/*.md` files.
+deleted root `docs/*.md` files or Starlight links to source-file URLs.
 
 Expected behavior:
 
@@ -71,12 +72,39 @@ Expected behavior:
   adapter or install docs;
 - tooling and docs-guard policy changes require `AGENTS.md`, environment docs,
   or this evaluation page;
+- Starlight content links must use published route paths, not `.md` source-file
+  URLs or related typo variants;
 - `.devin/wiki.json` must stay valid, use unique page titles, and reference
   existing priority files.
 
 The guard does not update DeepWiki. DeepWiki is a generated external index: keep
 `.devin/wiki.json` current, then audit the refreshed wiki after merge before
 claiming the public DeepWiki page is current.
+
+## Release Automation
+
+Releases are Changesets-gated repository releases. Feature, fix, docs, adapter,
+or tooling improvements that should appear in release notes need a changeset for
+the root `agent-memory-os` package:
+
+```bash
+pnpm changeset
+```
+
+Use patch for fixes and docs/tooling polish, minor for new capabilities, and
+major only for breaking public behavior. PRs that intentionally should not
+produce a release can use `[no release]` in the PR title or body.
+
+The `Release Metadata` workflow runs `pnpm release:check` on pull requests. It
+emits warnings for release-relevant changes without a changeset, but it does not
+fail CI.
+
+After the `CI` workflow succeeds on `main`, the `Release` workflow runs
+`changesets/action`. Pending changesets create or update the `Version Agent
+Memory OS` PR. When that version PR merges, `pnpm release:github` reads the root
+`CHANGELOG.md`, uses the current root `package.json` version, and creates a
+single GitHub Release titled `Agent Memory OS vX.Y.Z`. The repo does not publish
+packages to npm.
 
 ## CLI Smoke Test
 

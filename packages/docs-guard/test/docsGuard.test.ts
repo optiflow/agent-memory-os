@@ -87,6 +87,43 @@ describe("docs guard", () => {
     );
   });
 
+  it("fails when Starlight links point at source file extensions", async () => {
+    const repoRoot = await createRepo({
+      starlightDocs: {
+        "apps/docs/src/content/docs/index.md":
+          "[Getting Started](./start/getting-started.md)\n[Bad Variant](./start/getting-started.mdb)\n",
+      },
+    });
+
+    const result = runDocsGuard({
+      changedFiles: ["apps/docs/src/content/docs/index.md"],
+      repoRoot,
+    });
+
+    expect(result.errors).toContain(
+      'Starlight source link "./start/getting-started.md" in apps/docs/src/content/docs/index.md points at a source file. Use the published route path instead.',
+    );
+    expect(result.errors).toContain(
+      'Starlight source link "./start/getting-started.mdb" in apps/docs/src/content/docs/index.md points at a source file. Use the published route path instead.',
+    );
+  });
+
+  it("passes when Starlight links use published routes", async () => {
+    const repoRoot = await createRepo({
+      starlightDocs: {
+        "apps/docs/src/content/docs/index.md":
+          "[Getting Started](./start/getting-started/)\n[Source on GitHub](https://github.com/optiflow/agent-memory-os/blob/main/README.md)\n[Local section](#start-here)\n",
+      },
+    });
+
+    const result = runDocsGuard({
+      changedFiles: ["apps/docs/src/content/docs/index.md"],
+      repoRoot,
+    });
+
+    expect(result.errors).toEqual([]);
+  });
+
   it("passes docs-only changes", async () => {
     const repoRoot = await createRepo();
 
@@ -100,7 +137,11 @@ describe("docs guard", () => {
 });
 
 async function createRepo(
-  options: { readme?: string; wikiPriorityFiles?: string[] } = {},
+  options: {
+    readme?: string;
+    starlightDocs?: Record<string, string>;
+    wikiPriorityFiles?: string[];
+  } = {},
 ): Promise<string> {
   const repoRoot = await mkdtemp(join(tmpdir(), "agent-memory-os-docs-guard-"));
   const priorityFiles = options.wikiPriorityFiles ?? [
@@ -108,6 +149,7 @@ async function createRepo(
     "AGENTS.md",
     "apps/docs/src/content/docs/start/environment.md",
   ];
+  const starlightDocs = options.starlightDocs ?? {};
 
   const files = new Set([
     "README.md",
@@ -117,13 +159,16 @@ async function createRepo(
     "apps/docs/src/content/docs/reference/cli-reference.md",
     "apps/docs/src/content/docs/reference/evaluation.md",
     "apps/docs/src/content/docs/start/environment.md",
+    ...Object.keys(starlightDocs),
     ...priorityFiles.filter((file) => !file.startsWith("missing/")),
   ]);
 
   for (const file of files) {
     await writeFileWithParents(
       join(repoRoot, file),
-      file === "README.md" ? (options.readme ?? "# Agent Memory OS\n") : "",
+      file === "README.md"
+        ? (options.readme ?? "# Agent Memory OS\n")
+        : (starlightDocs[file] ?? ""),
     );
   }
 

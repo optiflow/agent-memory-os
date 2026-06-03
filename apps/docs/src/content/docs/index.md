@@ -11,14 +11,14 @@ architecture, contracts, verification, and roadmap boundaries live in detail.
 
 | If you need to... | Read |
 | --- | --- |
-| Run the repo from a fresh checkout | [Getting Started](./start/getting-started.md) |
-| Confirm local runtime expectations | [Environment](./start/environment.md) |
-| Understand the system shape | [Architecture](./architecture/architecture.md) |
-| Inspect stored objects and projections | [Data Model](./architecture/data-model.md) |
-| Call the JSON CLI bridge | [CLI Reference](./reference/cli-reference.md) |
-| Verify quality gates and evals | [Evaluation](./reference/evaluation.md) |
-| Install or inspect the Hermes boundary | [Hermes Install Notes](./integrations/hermes-install.md) |
-| Check phase boundaries | [Roadmap](./roadmap/v1-v2-roadmap.md) |
+| Run the repo from a fresh checkout | [Getting Started](./start/getting-started/) |
+| Confirm local runtime expectations | [Environment](./start/environment/) |
+| Understand the system shape | [Architecture](./architecture/architecture/) |
+| Inspect stored objects and projections | [Data Model](./architecture/data-model/) |
+| Call the JSON CLI bridge | [CLI Reference](./reference/cli-reference/) |
+| Verify quality gates and evals | [Evaluation](./reference/evaluation/) |
+| Install or inspect the Hermes boundary | [Hermes Install Notes](./integrations/hermes-install/) |
+| Check phase boundaries | [Roadmap](./roadmap/v1-v2-roadmap/) |
 
 ## Current Shape
 
