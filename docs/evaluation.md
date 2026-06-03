@@ -1,5 +1,8 @@
 # Evaluation Plan
 
+Evaluation starts with deterministic local gates. Memory benchmarks are useful
+only after the adapter contract and v1 data paths are stable.
+
 ## Local Acceptance
 
 The repo should pass:
@@ -10,28 +13,129 @@ pnpm lint:packages
 pnpm lint:repo
 pnpm typecheck
 pnpm test
+pnpm eval
+pnpm bench:ci
 pnpm build
 pnpm adapter:check
 pnpm run ci
 ```
 
-The CLI should support a local smoke test:
+`pnpm run ci` is the expected pull-request gate and runs lint, typecheck, tests,
+build, adapter checks, deterministic memory evals, and report-only benchmark
+timings.
+
+Python checks are adapter-boundary checks only. TypeScript owns memory ranking,
+schema, persistence, routing, verification policy, and product behavior.
+
+## CLI Smoke Test
 
 ```bash
 pnpm --filter @agent-memory-os/cli build
-echo '{"dbPath":"./memory.sqlite"}' | node packages/cli/dist/index.js seed-sample
-echo '{"dbPath":"./memory.sqlite","query":"Biome formatter","budgetTokens":400}' \
+tmp_dir="$(mktemp -d)"
+echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\"}" | node packages/cli/dist/index.js seed-sample
+echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"budgetTokens\":400}" \
   | node packages/cli/dist/index.js context-pack
 ```
 
+Expected result:
+
+- the first command returns sample core, event, and fact records;
+- the second command returns `contextPack`;
+- the context pack includes the seeded Biome memory;
+- citations are present on included items.
+
+## Adapter Smoke Test
+
+```bash
+python3 -m py_compile adapters/hermes/plugins/memory/meta_memory/__init__.py
+python3 -m unittest discover adapters/hermes/plugins/memory/meta_memory/test
+pnpm adapter:check
+```
+
+Before real Hermes integration testing, verify the target Hermes plugin contract
+and update the smoke fixture to cover the actual discovery mechanism.
+
+## Current Coverage
+
+Current local tests cover:
+
+- FTS search returns evidence and facts;
+- context packing respects token budgets;
+- CLI seed and context-pack smoke behavior;
+- adapter tool-call arguments cannot override configured `META_MEMORY_DB`;
+- adapter CLI failure handling.
+
+## Local Memory Benchmarks
+
+The first benchmark track is deterministic and repo-owned. It is inspired by the
+report's benchmark families, but it does not fetch external datasets, call LLMs,
+or add non-local memory providers.
+
+Run the quality eval:
+
+```bash
+pnpm eval
+```
+
+Expected result:
+
+- Vitest runs the benchmark fixture assertions;
+- `packages/evals/reports/eval.json` is written;
+- all deterministic quality metrics stay at their expected values.
+
+Run timing benchmarks:
+
+```bash
+pnpm bench
+pnpm bench:ci
+```
+
+Expected result:
+
+- Vitest runs the timing benchmarks for fixture seeding, SQLite FTS search, and
+  context-pack generation;
+- `packages/evals/reports/benchmarks.json` is written;
+- `pnpm bench:ci` is report-only and should fail only when the benchmark harness
+  itself fails.
+
+Major memory additions must add or update at least one benchmark case when they
+change retrieval, context packing, write preservation, verification policy, or
+the local storage behavior that affects memory quality.
+
+## Future V1 Behavior Gaps
+
+Future v1 feature work should add tests for:
+
+- write path preserves evidence before derived facts;
+- verification records can be retrieved and populated into packs when the router
+  grows warning-aware injection;
+- adapter subprocess timeouts fail clearly;
+- real Hermes plugin discovery for a target Hermes version.
+
 ## Quality Metrics
 
-- Tokens injected per turn.
-- Retrieval latency.
-- Verified-memory hit rate.
-- Stale-memory warning rate.
+- Recall at K.
+- Irrelevant injection rate.
 - Context-pack citation coverage.
+- Token budget compliance.
+- Evidence coverage.
+- Context-pack generation latency.
+- Search latency and p95 prefetch latency.
+- Verification record rate.
+- Stale or unsupported memory rate.
+- Contradiction resolution rate.
+- Handoff recovery quality, once handoff packets exist.
+- Wrong answers caused by write-side loss versus retrieval-side loss.
 
-## Benchmark Direction
+## Future Benchmark Tracks
 
-Use conversational recall and temporal-reasoning benchmarks for broad memory quality, then add environment-experience tests for coding-agent workflows. The key acceptance criterion is not raw recall alone; it is avoiding stale, irrelevant, or branch-invalid injection.
+Use conversational recall benchmarks for user and session memory, temporal
+reasoning benchmarks for contradiction and validity-window behavior, and
+environment-experience tests for coding-agent workflows.
+
+The key acceptance criterion is not raw recall alone. The system must avoid
+stale, irrelevant, unsupported, or branch-invalid injection, and it must
+separate write-side preservation failures from retrieval failures.
+
+External benchmarks from the report should stay future-facing until v1 has a
+stable Hermes integration path.

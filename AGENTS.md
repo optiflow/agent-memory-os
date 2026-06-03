@@ -3,6 +3,7 @@
 ## Project Rules
 
 - Keep the repo TypeScript-first. Use Python only for the thin Hermes adapter required by Hermes.
+- TypeScript owns domain types, SQLite/FTS schema and storage, routing, context packing, verification policy, the CLI bridge, tests, and pnpm/Turborepo orchestration. Python must not own memory behavior, ranking, schema, persistence, retrieval, or product policy.
 - Use Turborepo for package orchestration and Biome as the only linter/formatter.
 - Keep v1 local-first and auditable: SQLite + FTS, no cloud memory provider, vector DB, graph DB, or LLM extraction dependency.
 - Preserve the v1/v2 boundary. V1 implements evidence, facts, FTS retrieval, context packs, and verification records. V2 is graph/verification/reflection design only.

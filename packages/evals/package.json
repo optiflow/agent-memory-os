@@ -1,0 +1,21 @@
+{
+  "name": "@agent-memory-os/evals",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "bench": "mkdir -p reports && vitest bench --config ../../vitest.config.ts src/memory.bench.ts --outputJson reports/benchmarks.json",
+    "bench:ci": "mkdir -p reports && vitest bench --config ../../vitest.config.ts src/memory.bench.ts --outputJson reports/benchmarks.json",
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
+    "eval": "vitest run --config ../../vitest.config.ts src/evaluate.test.ts",
+    "lint": "biome check .",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@agent-memory-os/core": "workspace:*",
+    "@agent-memory-os/sqlite": "workspace:*"
+  }
+}

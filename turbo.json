@@ -1,6 +1,18 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "tasks": {
+    "bench": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"],
+      "outputs": ["reports/**"]
+    },
+    "bench:ci": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"],
+      "outputs": ["reports/**"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.base.json"],
@@ -12,6 +24,12 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "eval": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"],
+      "outputs": ["reports/**"]
     },
     "lint": {
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/biome.json"],
