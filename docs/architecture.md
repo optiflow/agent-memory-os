@@ -87,8 +87,8 @@ verification records are read and populated into context packs.
 
 ## Adapter Compatibility Risk
 
-Current repo code has a `plugin.json` metadata file and a `MetaMemoryProvider`
-class scaffold. Some Hermes versions or docs describe `plugin.yaml`,
-`register(ctx)`, and lifecycle hooks instead. Before feature development,
-verify the target Hermes version and update the adapter metadata or registration
-shape if needed.
+Current repo code aligns the local adapter scaffold to `plugin.yaml`,
+`register(ctx)`, `initialize(...)`, provider tool schemas, and lifecycle hook
+wiring. This is local contract proof only. Before claiming production Hermes
+compatibility, verify a target Hermes checkout loads the plugin and exercises
+the registered tools and hooks.

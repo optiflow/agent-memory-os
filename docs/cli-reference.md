@@ -48,7 +48,8 @@ Returns:
 
 ## `search`
 
-Search local core memory, evidence, and facts.
+Search local evidence and facts with SQLite FTS. Core memory blocks are included
+through `context-pack`, not raw `search`.
 
 Required:
 

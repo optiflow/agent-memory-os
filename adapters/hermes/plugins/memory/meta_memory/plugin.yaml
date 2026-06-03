@@ -1,0 +1,11 @@
+name: meta_memory
+version: 0.1.0
+description: Local-first meta memory provider backed by the agent-memory-os TypeScript CLI.
+provider_class: MetaMemoryProvider
+provides_tools:
+  - context_pack
+  - remember
+  - search
+  - verify
+provides_hooks:
+  - on_session_end

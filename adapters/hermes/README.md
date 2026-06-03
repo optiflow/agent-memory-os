@@ -1,30 +1,34 @@
 # Hermes Adapter
 
-This directory contains a thin Python adapter for Hermes Agent. Hermes memory providers are Python plugins, so this adapter delegates all storage and routing work to the TypeScript `meta-memory` CLI.
+This directory contains a thin Python adapter for Hermes Agent. Hermes plugins
+are Python modules, so this adapter delegates all storage and routing work to
+the TypeScript `meta-memory` CLI.
 
 Python must only map Hermes lifecycle and tool calls to the TypeScript CLI. It
 must not own memory schema, ranking, persistence, retrieval, verification
 policy, or product behavior.
 
-## Compatibility Audit First
+## Contract Shape
 
-Before feature development, verify the target Hermes version and plugin contract.
-Current Hermes documentation describes memory plugins with `plugin.yaml`,
-`register(ctx)`, and lifecycle hooks. This repo currently contains a
-`plugin.json` scaffold and a `MetaMemoryProvider` class.
+Current Hermes documentation describes local plugins with:
 
-The current scaffold does not yet prove production Hermes activation through
-`plugin.yaml`, `register(ctx)`, or `initialize(...)`.
+- `plugin.yaml` metadata, including the plugin name, version, description,
+  provided tools, and provided hooks;
+- a Python `register(ctx)` entrypoint that calls `ctx.register_tool(...)` and
+  `ctx.register_hook(...)`;
+- lifecycle hook names such as `pre_tool_call`, `post_tool_call`,
+  `pre_llm_call`, `post_llm_call`, `on_session_start`, and `on_session_end`;
+- JSON-style tool schemas paired with Python handlers.
 
-Do not assume the adapter is production-compatible until the target Hermes
-version confirms:
+This adapter exposes `initialize(...)` as bridge setup only: read environment,
+prepare CLI and SQLite path configuration, and avoid owning memory schema,
+ranking, persistence, or retrieval there. The current registration wires the v1
+tools and the `on_session_end` hook; additional lifecycle hooks should be added
+only when their Hermes signatures and local behavior are proven.
 
-- metadata filename and fields;
-- provider registration function or class discovery;
-- required `initialize` behavior;
-- prefetch and turn-sync hook signatures;
-- provider tool schema and handler registration;
-- session-end and built-in memory write mirroring behavior.
+The repo-level proof today is local contract alignment and smoke testing. Do not
+describe it as a live production Hermes installation unless a real target Hermes
+checkout has loaded the plugin and exercised the registered hooks and tools.
 
 ## Local Setup
 
@@ -43,7 +47,10 @@ pnpm --filter @agent-memory-os/cli link --global
 export META_MEMORY_CLI=meta-memory
 ```
 
-Then copy or symlink `adapters/hermes/plugins/memory/meta_memory` into the Hermes memory plugin directory and select `meta_memory` as the active provider.
+For local smoke testing, use the adapter directory in this repo. For a real
+Hermes checkout, install the plugin according to that target release's plugin
+directory and enablement rules, then verify that `plugin.yaml`, `register(ctx)`,
+`initialize(...)` behavior, hooks, and tool schemas are discovered.
 
 ## Configuration
 
@@ -66,11 +73,15 @@ The adapter currently exposes only four v1 tools:
 
 Hermes tool schemas are intentionally narrower than the CLI contracts. For
 example, the `remember` tool exposes only `content`; the adapter supplies the
-configured database path and TypeScript defaults handle the rest.
+configured database path and TypeScript defaults handle the rest. Each registered
+tool schema must point to a Python handler that delegates to the matching CLI
+command.
 
 ## Lifecycle Mapping
 
-The current scaffold maps Hermes-facing behavior to CLI commands:
+The current scaffold maps Hermes-facing behavior to CLI commands. In the
+`register(ctx)` integration, tool methods become registered handlers, while
+provider callbacks and hooks stay thin bridges to the same CLI behavior:
 
 | Adapter method | CLI command | Purpose |
 | --- | --- | --- |
@@ -102,5 +113,7 @@ echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"bud
   | node packages/cli/dist/index.js context-pack
 ```
 
-These checks prove the local adapter and CLI scaffold. They do not prove Hermes
-plugin discovery for a specific Hermes release.
+These checks prove the local adapter, manifest, `initialize(...)`,
+`register(ctx)`, tool schemas, hook registration fixture, and CLI scaffold. They
+do not prove live Hermes plugin discovery, enablement, lifecycle hook execution,
+or production installation for a specific Hermes release.
