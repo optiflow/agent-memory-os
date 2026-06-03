@@ -240,6 +240,65 @@ const workspaceResourceSeed: BenchmarkSeed = {
   ],
 };
 
+const recallSafetySeed: BenchmarkSeed = {
+  coreBlocks: [
+    {
+      id: "core_recall_safety_rule",
+      label: "Recall safety rule",
+      content: "V2 Core keeps risky memory visible but adds structured recall warnings.",
+      authority: 90,
+      readOnly: false,
+      updatedAt: timestamp,
+    },
+  ],
+  evidenceEvents: [
+    {
+      id: "event_recall_old",
+      kind: "explicit_memory",
+      actor: "user",
+      content: "Phase 2 recall safety is still design-only in the roadmap.",
+      timestamp,
+      scope: workspaceScope,
+    },
+    {
+      id: "event_recall_new",
+      kind: "system_event",
+      actor: "system",
+      content: "V2 Core recall safety now emits temporal relation warnings in context packs.",
+      timestamp,
+      scope: workspaceScope,
+    },
+  ],
+  semanticFacts: [
+    {
+      id: "fact_recall_old",
+      subject: "roadmap",
+      predicate: "states",
+      object: "Phase 2 recall safety is design-only",
+      confidence: 0.9,
+      sourceEventIds: ["event_recall_old"],
+    },
+    {
+      id: "fact_recall_new",
+      subject: "roadmap",
+      predicate: "states",
+      object: "V2 Core recall safety warning support is implemented",
+      confidence: 0.9,
+      sourceEventIds: ["event_recall_new"],
+    },
+  ],
+  temporalRelations: [
+    {
+      id: "relation_recall_new_supersedes_old",
+      scope: workspaceScope,
+      fromId: "fact_recall_new",
+      toId: "fact_recall_old",
+      relation: "supersedes",
+      sourceEventIds: ["event_recall_new"],
+    },
+  ],
+};
+
 export const benchmarkCases: BenchmarkCase[] = [
   {
     id: "conversation-preferences",
@@ -292,5 +351,15 @@ export const benchmarkCases: BenchmarkCase[] = [
     expectedItemIds: ["repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md"],
     rejectedItemIds: ["session_unrelated"],
     seed: workspaceResourceSeed,
+  },
+  {
+    id: "recall-safety-warning",
+    track: "recall_safety",
+    title: "Recall safety keeps superseded memory visible with warnings",
+    query: "V2 Core recall safety roadmap warning",
+    budgetTokens: 520,
+    expectedItemIds: ["core_recall_safety_rule", "fact_recall_old", "fact_recall_new"],
+    rejectedItemIds: [],
+    seed: recallSafetySeed,
   },
 ];

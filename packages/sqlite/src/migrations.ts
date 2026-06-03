@@ -82,4 +82,23 @@ CREATE TABLE IF NOT EXISTS workspace_resources (
 
 CREATE VIRTUAL TABLE IF NOT EXISTS workspace_resource_fts
 USING fts5(uri UNINDEXED, scope_type UNINDEXED, scope_id UNINDEXED, content, metadata);
+
+CREATE TABLE IF NOT EXISTS temporal_relations (
+  id TEXT PRIMARY KEY,
+  scope_type TEXT NOT NULL,
+  scope_id TEXT NOT NULL,
+  from_id TEXT NOT NULL,
+  to_id TEXT NOT NULL,
+  relation TEXT NOT NULL,
+  valid_from TEXT,
+  valid_until TEXT,
+  source_event_ids_json TEXT NOT NULL,
+  metadata_json TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS temporal_relations_scope_from_idx
+ON temporal_relations(scope_type, scope_id, from_id, relation);
+
+CREATE INDEX IF NOT EXISTS temporal_relations_scope_to_idx
+ON temporal_relations(scope_type, scope_id, to_id, relation);
 `;

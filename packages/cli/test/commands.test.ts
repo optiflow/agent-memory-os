@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -122,5 +122,76 @@ describe("runCommand", () => {
         policy: "graph",
       }),
     ).rejects.toThrow('Expected "policy" to be auto, task, or workspace');
+  });
+
+  it("adds and probes temporal relations through the CLI", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "agent-memory-os-"));
+    const dbPath = join(dir, "memory.sqlite");
+
+    try {
+      const output = await runCommand("add-relation", {
+        dbPath,
+        fromId: "fact_new",
+        toId: "fact_old",
+        relation: "supersedes",
+      });
+      const probe = await runCommand("probe-relations", {
+        dbPath,
+        targetId: "fact_old",
+      });
+
+      expect(JSON.stringify(output)).toContain("relation_");
+      expect(JSON.stringify(output)).toContain("event_");
+      expect(JSON.stringify(probe)).toContain("fact_new");
+      expect(JSON.stringify(probe)).toContain("supersedes");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects invalid temporal relations", async () => {
+    await expect(
+      runCommand("add-relation", {
+        fromId: "fact_new",
+        toId: "fact_old",
+        relation: "invalid",
+      }),
+    ).rejects.toThrow('Expected "relation" to be a supported temporal relation');
+  });
+
+  it("returns workspace drift warnings from context packs", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "agent-memory-os-"));
+    const dbPath = join(dir, "memory.sqlite");
+    const workspacePath = join(dir, "workspace");
+
+    try {
+      await mkdir(workspacePath, { recursive: true });
+      await writeFile(join(workspacePath, "notes.md"), "current file content", {
+        encoding: "utf8",
+      });
+      await runCommand("upsert-resource", {
+        dbPath,
+        uri: "repo://notes.md",
+        title: "Notes",
+        content: "Tracked memory resource for drift checks.",
+        kind: "file",
+        metadata: {
+          filePath: "notes.md",
+          contentSha256: "definitely-not-the-current-hash",
+        },
+      });
+
+      const pack = await runCommand("context-pack", {
+        dbPath,
+        query: "tracked memory resource",
+        policy: "workspace",
+        workspacePath,
+      });
+
+      expect(JSON.stringify(pack)).toContain("file_hash_mismatch");
+      expect(JSON.stringify(pack)).toContain("repo://notes.md");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -78,6 +78,7 @@ export function createContextPack(
       citation: item.citation,
       score: item.score,
       tokenEstimate,
+      metadata: item.metadata,
     });
   }
 
@@ -87,6 +88,7 @@ export function createContextPack(
     estimatedTokens,
     generatedAt: new Date().toISOString(),
     items,
+    recallWarnings: [],
     verificationWarnings,
   };
 }

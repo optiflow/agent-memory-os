@@ -15,12 +15,13 @@
 - Preserve the v1/v2 boundary. V1 implements evidence, facts, FTS retrieval,
   context packs, and verification records. V1.1 implements active session state,
   workspace resources, `auto`/`task`/`workspace` router policies, and latest
-  non-passed verification warnings in context packs. V2 is graph,
-  branch/workspace drift checks, citation validation, reflection, and handoff
-  design only until explicitly requested.
+  non-passed verification warnings in context packs. V2 Core implements
+  local-first temporal relations, source citation validation, branch/workspace
+  drift warnings, and recall warnings in context packs. V2 reflection and
+  handoff work stays design only until explicitly requested.
 - Derived projections must preserve evidence first. Session-state and
-  workspace-resource writes should keep source event IDs or create audit
-  evidence before updating projection tables.
+  workspace-resource and temporal-relation writes should keep source event IDs
+  or create audit evidence before updating projection tables.
 - Make surgical changes. Do not refactor adjacent files or add speculative
   abstractions.
 

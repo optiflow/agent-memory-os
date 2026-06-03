@@ -106,6 +106,8 @@ class MetaMemoryProviderTest(unittest.TestCase):
         expected_tools = [
             "status",
             "context_pack",
+            "add_relation",
+            "probe_relations",
             "remember",
             "search",
             "upsert_session_state",
@@ -139,6 +141,8 @@ class MetaMemoryProviderTest(unittest.TestCase):
             [
                 "status",
                 "context_pack",
+                "add_relation",
+                "probe_relations",
                 "remember",
                 "search",
                 "upsert_session_state",
@@ -200,6 +204,8 @@ class MetaMemoryProviderTest(unittest.TestCase):
             [
                 "status",
                 "context_pack",
+                "add_relation",
+                "probe_relations",
                 "remember",
                 "search",
                 "upsert_session_state",
@@ -230,6 +236,8 @@ class MetaMemoryProviderTest(unittest.TestCase):
             [
                 "status",
                 "context_pack",
+                "add_relation",
+                "probe_relations",
                 "remember",
                 "search",
                 "upsert_session_state",
@@ -248,6 +256,17 @@ class MetaMemoryProviderTest(unittest.TestCase):
 
         verify_schema = next(schema for schema in schemas if schema["name"] == "verify")
         self.assertEqual(["targetId", "message"], verify_schema["parameters"]["required"])
+
+        add_relation_schema = next(schema for schema in schemas if schema["name"] == "add_relation")
+        self.assertEqual(
+            ["fromId", "toId", "relation"],
+            add_relation_schema["parameters"]["required"],
+        )
+
+        probe_relations_schema = next(
+            schema for schema in schemas if schema["name"] == "probe_relations"
+        )
+        self.assertEqual(["targetId"], probe_relations_schema["parameters"]["required"])
 
     def test_status_reports_missing_cli_without_running_subprocess(self) -> None:
         with provider_env(META_MEMORY_CLI="definitely-missing-meta-memory"):
@@ -325,6 +344,57 @@ class MetaMemoryProviderTest(unittest.TestCase):
             payload = json.loads(run.call_args.kwargs["input"])
             self.assertEqual(str(db_path), payload["dbPath"])
             self.assertEqual("Biome formatter", payload["query"])
+
+    def test_v2_tool_calls_delegate_to_cli_without_db_override(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=["meta-memory", "add-relation"],
+            returncode=0,
+            stdout=json.dumps({"relation": {"id": "relation_1"}}),
+            stderr="",
+        )
+        with provider_env():
+            provider = meta_memory.MetaMemoryProvider()
+
+        with patch.object(meta_memory.subprocess, "run", return_value=completed) as run:
+            result = provider.handle_tool_call(
+                "add_relation",
+                {
+                    "fromId": "fact_new",
+                    "toId": "fact_old",
+                    "relation": "supersedes",
+                    "dbPath": "/tmp/ignored.sqlite",
+                },
+            )
+
+        self.assertEqual({"relation": {"id": "relation_1"}}, json.loads(result))
+        self.assertEqual(["meta-memory", "add-relation"], run.call_args.args[0])
+
+        payload = json.loads(run.call_args.kwargs["input"])
+        self.assertEqual(":memory:", payload["dbPath"])
+        self.assertEqual("fact_new", payload["fromId"])
+        self.assertEqual("supersedes", payload["relation"])
+
+    def test_context_pack_tool_passes_workspace_path(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=["meta-memory", "context-pack"],
+            returncode=0,
+            stdout=json.dumps({"contextPack": {"items": []}}),
+            stderr="",
+        )
+        with provider_env():
+            provider = meta_memory.MetaMemoryProvider()
+
+        with patch.object(meta_memory.subprocess, "run", return_value=completed) as run:
+            provider.handle_tool_call(
+                "context_pack",
+                {
+                    "query": "drift",
+                    "workspacePath": "/tmp/workspace",
+                },
+            )
+
+        payload = json.loads(run.call_args.kwargs["input"])
+        self.assertEqual("/tmp/workspace", payload["workspacePath"])
 
     def test_on_memory_write_mirrors_builtin_memory_write_to_cli(self) -> None:
         completed = subprocess.CompletedProcess(

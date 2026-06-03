@@ -30,9 +30,10 @@ flowchart LR
   CLI --> Store["SQLite store (evidence, FTS, projections)"]
   Core --> Router["Context router (auto, task, workspace)"]
   Store --> Router
-  Router --> Pack["ContextPack (citations and warnings)"]
+  Router --> Safety["V2 Core recall safety (citation, relation, drift warnings)"]
+  Safety --> Pack["ContextPack (citations and warnings)"]
   Pack --> Hermes
-  Plugin -.-> Future["V2 design only: probe, handoff, reflect"]
+  Plugin -.-> Future["V2+ design only: handoff and reflect"]
 ```
 
 ## Why One Hermes Provider
@@ -49,7 +50,8 @@ The provider boundary stays small:
 - active session-state updates;
 - workspace resource updates and browsing;
 - verification recording;
-- future graph, reflection, and handoff tools only after V1/V1.1 are stable.
+- V2 Core relation probing;
+- future reflection and handoff tools only after recall safety is stable.
 
 Future tools such as probe, handoff, and reflect should remain behind the same
 provider boundary. They should not become separate Hermes providers.
@@ -66,7 +68,8 @@ provider boundary. They should not become separate Hermes providers.
 | Verification records | V1.1 implemented | Writable statuses plus latest non-passed warnings in context packs. |
 | Active session state | V1.1 implemented | Compact current-task state without LLM extraction. |
 | Workspace resources | V1.1 implemented | Browseable project/resource memory without graph or cloud dependencies. |
-| Temporal graph | V2 design | Validity windows, supersession, and relation-aware recall. |
+| Temporal relations | V2 Core implemented | Local scoped relations for contradiction and supersession warnings. |
+| Citation and drift warnings | V2 Core implemented | Source event validation plus optional local git/file drift warnings. |
 | Reflection | V2 design | Slow-path synthesis over evidence, facts, and temporal projections. |
 | Handoff and social memory | V2+ design | Multi-agent transfer packets and peer/identity memory. |
 
@@ -95,7 +98,9 @@ The read path is routed:
 3. Include active session state for `auto` and `task` policies.
 4. Include workspace resources for `auto` and `workspace` policies.
 5. Build bounded context packs with citations and latest verification warnings.
-6. Defer graph and reflection work until V2.
+6. Add V2 Core recall warnings for missing citations, scoped contradictions,
+   supersessions, branch drift, commit drift, missing files, and hash changes.
+7. Defer reflection, handoff, social memory, connector sync, and federation.
 
 ## Trust Boundary
 
@@ -105,7 +110,10 @@ identifiers when relying on them.
 
 If the plugin is installed but the CLI is not ready, the prompt block tells
 Hermes to call `meta_memory.status` before relying on memory tools. Context
-packs include latest non-passed verification records for packed item IDs.
+packs include latest non-passed verification records for packed item IDs plus
+V2 Core recall warnings. Recall warnings are additive: the router keeps packed
+items visible and lets the agent inspect the cited risk instead of silently
+filtering memory.
 
 ## Adapter Compatibility Risk
 

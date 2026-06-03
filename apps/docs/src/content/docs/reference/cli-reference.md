@@ -17,8 +17,8 @@ sequenceDiagram
   participant Router as "Context router"
 
   Caller->>CLI: Send one JSON object on stdin
-  alt remember, verify, session, or resource write
-    CLI->>Store: Persist evidence, projection, or verification record
+  alt remember, verify, session, resource, or relation write
+    CLI->>Store: Persist evidence, projection, verification, or relation record
     Store-->>CLI: Stored object
     CLI-->>Caller: stdout JSON result
   else search
@@ -28,8 +28,12 @@ sequenceDiagram
   else context-pack
     CLI->>Store: Read core, search results, session, and resources
     CLI->>Router: Apply policy and token budget
-    Router->>Store: Fetch latest non-passed verification records
+    Router->>Store: Fetch latest verification and recall warnings
     Router-->>CLI: ContextPack
+    CLI-->>Caller: stdout JSON result
+  else probe-relations
+    CLI->>Store: Read scoped temporal relations
+    Store-->>CLI: TemporalRelation array
     CLI-->>Caller: stdout JSON result
   else invalid input or unknown command
     CLI-->>Caller: non-zero exit and stderr JSON error
@@ -54,6 +58,7 @@ echo '{"dbPath":":memory:","query":"Biome","budgetTokens":400}' \
 | `dbPath` | `META_MEMORY_DB`, then `:memory:` | SQLite path. |
 | `scope` | `{ "type": "workspace", "id": "default" }` | Optional memory scope. |
 | `metadata` | omitted | Optional JSON object where supported. |
+| `workspacePath` | omitted | Optional context-pack workspace root for local drift checks. |
 
 If neither `dbPath` nor `META_MEMORY_DB` is set, direct CLI calls use
 `:memory:`. Those calls are ephemeral and are not equivalent to the Hermes
@@ -131,6 +136,7 @@ Optional fields:
 
 - `budgetTokens`: positive integer, defaults to `1200`.
 - `policy`: `auto`, `task`, or `workspace`; defaults to `auto`.
+- `workspacePath`: local workspace root used for git/file drift checks.
 - `scope`
 
 Returns:
@@ -144,6 +150,8 @@ Notes:
 - `auto` includes active session state and workspace resources.
 - `task` excludes workspace resource search.
 - `workspace` excludes active session state.
+- V2 Core recall warnings are additive. Risky items stay visible in `items` and
+  warnings are returned in `recallWarnings`.
 
 ## `verify`
 
@@ -171,6 +179,65 @@ Notes:
 
 - Latest non-passed records are included as warnings in context packs for packed
   item IDs.
+
+## `add-relation`
+
+Purpose:
+
+Add a scoped temporal relation between memory items.
+
+Required fields:
+
+- `fromId`: non-empty source item ID.
+- `toId`: non-empty target item ID.
+- `relation`: `contradicts`, `derives`, `extends`, `supports`, or
+  `supersedes`.
+
+Optional fields:
+
+- `validFrom`: non-empty timestamp string.
+- `validUntil`: non-empty timestamp string.
+- `sourceEventIds`: array of evidence event IDs.
+- `scope`
+- `metadata`
+
+Returns:
+
+```text
+{
+  "event": EvidenceEvent,
+  "relation": TemporalRelation
+}
+```
+
+Notes:
+
+- This is a projection write. The CLI appends an audit evidence event before
+  storing the relation.
+- `contradicts` and `supersedes` can produce V2 Core recall warnings in context
+  packs.
+
+## `probe-relations`
+
+Purpose:
+
+Inspect scoped temporal relations connected to a memory item.
+
+Required fields:
+
+- `targetId`: non-empty memory item ID.
+
+Optional fields:
+
+- `relation`: narrows results to one relation type.
+- `limit`: positive integer, defaults to `20`.
+- `scope`
+
+Returns:
+
+```text
+{ "relations": TemporalRelation[] }
+```
 
 ## `upsert-session-state`
 

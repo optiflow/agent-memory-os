@@ -176,7 +176,9 @@ Expected result:
 
 Major memory additions must add or update at least one benchmark case when they
 change retrieval, context packing, write preservation, verification policy, or
-local storage behavior that affects memory quality.
+local storage behavior that affects memory quality. V2 Core additions should
+include a deterministic recall-safety case for citation, temporal relation, or
+drift warnings.
 
 ## Current Coverage
 
@@ -186,29 +188,35 @@ Current local tests cover:
 - FTS search returns session state and workspace resources.
 - Context packing respects token budgets and `auto`/`task`/`workspace` policy
   boundaries.
+- Context packs preserve risky items while adding V2 Core recall warnings.
+- SQLite stores and probes scoped temporal relations.
+- SQLite emits missing-source citation warnings.
+- CLI `add-relation`, `probe-relations`, and workspace drift warnings.
 - CLI seed and context-pack smoke behavior.
 - Hermes adapter metadata uses `plugin.yaml`.
-- Adapter `initialize(...)` and `register(ctx)` wire the provider, V1/V1.1
-  tools, setup skill, and `on_session_end` hook in a local fixture.
+- Adapter `initialize(...)` and `register(ctx)` wire the provider, V1/V1.1/V2
+  Core tools, setup skill, and `on_session_end` hook in a local fixture.
 - Adapter `status` reports missing CLI, env CLI, repo-local CLI fallback, and
   selected database path without calling the CLI.
 - Adapter tool schemas use the Hermes `parameters` shape.
 - Adapter tool handlers return JSON strings.
 - Adapter tool-call arguments cannot override configured `META_MEMORY_DB`.
+- Adapter passes `workspacePath` through to `context_pack`.
 - Adapter CLI failure handling.
 
 ## Future Gaps
 
 Future local feature work should add tests for:
 
-- write path preserves evidence before derived facts;
+- broader write path coverage for derived facts beyond current projection
+  writes;
 - adapter subprocess timeouts fail clearly;
 - real Hermes plugin discovery, hook execution, and tool schema registration for
   a target Hermes version.
 
 Future benchmark tracks should cover conversational recall, temporal reasoning,
-contradiction handling, validity windows, and coding-agent environment
-experience.
+validity-window conflict handling, reflection, handoff recovery, and richer
+coding-agent environment experience.
 
 The key acceptance criterion is not raw recall alone. The system must avoid
 stale, irrelevant, unsupported, or branch-invalid injection, and it must

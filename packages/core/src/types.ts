@@ -101,6 +101,26 @@ export interface VerificationRecord {
   metadata?: Metadata;
 }
 
+export type RecallWarningKind =
+  | "branch_drift"
+  | "citation_missing"
+  | "commit_drift"
+  | "file_hash_mismatch"
+  | "file_missing"
+  | "temporal_contradiction"
+  | "temporal_supersession";
+
+export interface RecallWarning {
+  id: string;
+  kind: RecallWarningKind;
+  targetId: string;
+  severity: "info" | "warning";
+  message: string;
+  generatedAt: string;
+  relatedIds?: string[];
+  metadata?: Metadata;
+}
+
 export interface ContextPackItem {
   id: string;
   kind: SearchResultKind;
@@ -108,6 +128,7 @@ export interface ContextPackItem {
   citation: string;
   score: number;
   tokenEstimate: number;
+  metadata?: Metadata;
 }
 
 export interface ContextPack {
@@ -116,6 +137,7 @@ export interface ContextPack {
   estimatedTokens: number;
   generatedAt: string;
   items: ContextPackItem[];
+  recallWarnings: RecallWarning[];
   verificationWarnings: VerificationRecord[];
 }
 
@@ -132,13 +154,24 @@ export interface ContextRouterRequest {
   scope?: MemoryScope;
   budgetTokens?: number;
   policy?: ContextRouterPolicy;
+  workspacePath?: string;
 }
 
 export interface MemoryStore {
   addSemanticFact(fact: SemanticFact): Promise<SemanticFact>;
+  addTemporalRelation(relation: TemporalRelation): Promise<TemporalRelation>;
   appendEvidence(event: EvidenceEvent): Promise<EvidenceEvent>;
   getActiveSessionStates(scope?: MemoryScope): Promise<SessionState[]>;
   getCoreBlocks(scope?: MemoryScope): Promise<CoreMemoryBlock[]>;
+  getRecallWarnings(targetIds: string[], scope?: MemoryScope): Promise<RecallWarning[]>;
+  getTemporalRelationsForTarget(
+    targetId: string,
+    options?: {
+      relation?: TemporalRelation["relation"];
+      scope?: MemoryScope;
+      limit?: number;
+    },
+  ): Promise<TemporalRelation[]>;
   getVerificationWarnings(targetIds: string[]): Promise<VerificationRecord[]>;
   listWorkspaceResources(options?: {
     scope?: MemoryScope;
@@ -158,6 +191,7 @@ export interface ContextRouter {
 
 export interface TemporalRelation {
   id: string;
+  scope: MemoryScope;
   fromId: string;
   toId: string;
   relation: "contradicts" | "derives" | "extends" | "supports" | "supersedes";

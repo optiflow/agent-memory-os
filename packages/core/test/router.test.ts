@@ -3,12 +3,14 @@ import type {
   CoreMemoryBlock,
   MemoryScope,
   MemoryStore,
+  RecallWarning,
   SearchResult,
   SessionState,
+  TemporalRelation,
   VerificationRecord,
   WorkspaceResource,
 } from "../src/index.js";
-import { DefaultContextRouter } from "../src/index.js";
+import { createRecallWarning, DefaultContextRouter } from "../src/index.js";
 
 const scope: MemoryScope = { type: "workspace", id: "agent-memory-os" };
 
@@ -18,6 +20,10 @@ class FakeStore implements MemoryStore {
   seenWarningTargets: string[] = [];
 
   async addSemanticFact() {
+    throw new Error("unused");
+  }
+
+  async addTemporalRelation() {
     throw new Error("unused");
   }
 
@@ -53,6 +59,23 @@ class FakeStore implements MemoryStore {
         sourceEventIds: ["event_state"],
       },
     ];
+  }
+
+  async getRecallWarnings(targetIds: string[]): Promise<RecallWarning[]> {
+    return targetIds.includes("fact_local")
+      ? [
+          createRecallWarning({
+            kind: "temporal_contradiction",
+            targetId: "fact_local",
+            message: "Fact has an active contradiction.",
+            relatedIds: ["fact_other"],
+          }),
+        ]
+      : [];
+  }
+
+  async getTemporalRelationsForTarget(): Promise<TemporalRelation[]> {
+    throw new Error("unused");
   }
 
   async getVerificationWarnings(targetIds: string[]): Promise<VerificationRecord[]> {
@@ -132,6 +155,8 @@ describe("DefaultContextRouter", () => {
     expect(pack.items.map((item) => item.id)).toContain("resource_docs");
     expect(store.seenWarningTargets).toContain("resource_docs");
     expect(pack.verificationWarnings.map((warning) => warning.targetId)).toEqual(["resource_docs"]);
+    expect(pack.recallWarnings.map((warning) => warning.kind)).toContain("temporal_contradiction");
+    expect(pack.items.map((item) => item.id)).toContain("fact_local");
   });
 
   it("excludes resources from task policy", async () => {

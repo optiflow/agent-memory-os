@@ -32,7 +32,9 @@ The CLI defaults to `{ "type": "workspace", "id": "default" }`.
 | Verification records | V1.1 implemented | Latest non-passed records are included as context-pack warnings. |
 | Session state | V1.1 implemented | Compact current-task projection, backed by audit evidence. |
 | Workspace resources | V1.1 implemented | URI-addressed resource tree, backed by audit evidence. |
-| Context packs | V1/V1.1 implemented | Generated, bounded injection views with citations and warnings. |
+| Temporal relations | V2 Core implemented | Scoped local relations for contradiction and supersession warnings. |
+| Recall warnings | V2 Core implemented | Missing citation, temporal relation, and local drift warnings. |
+| Context packs | V1/V1.1/V2 Core implemented | Generated, bounded injection views with citations and warnings. |
 
 ```mermaid
 flowchart TD
@@ -41,15 +43,18 @@ flowchart TD
   Facts["Semantic facts (sourceEventIds JSON)"]
   Session["Session state projection (sourceEventIds JSON)"]
   Resources["Workspace resources (sourceEventIds JSON)"]
+  Relations["Temporal relations (sourceEventIds JSON)"]
   FTS["SQLite FTS indexes"]
   Search["Search results"]
+  Safety["Recall safety checks"]
   Router["Context router"]
-  Pack["ContextPack items plus verificationWarnings"]
+  Pack["ContextPack items plus verificationWarnings and recallWarnings"]
   Verify["Verification records (targetId)"]
 
   Evidence --> Facts
   Evidence --> Session
   Evidence --> Resources
+  Evidence --> Relations
   Evidence --> FTS
   Facts --> FTS
   Session --> FTS
@@ -57,7 +62,10 @@ flowchart TD
   Core --> Router
   FTS --> Search
   Search --> Router
+  Relations --> Safety
+  Search --> Safety
   Router --> Pack
+  Safety --> Pack
   Verify --> Pack
 ```
 
@@ -112,6 +120,32 @@ types and SQLite migrations remain the source of truth for persisted memory.
 V1 does not include LLM extraction. Facts are added by explicit code paths or
 fixtures only.
 
+## Temporal Relations
+
+`TemporalRelation` stores local, scoped relationships between memory item IDs.
+
+Supported relations:
+
+- `contradicts`
+- `derives`
+- `extends`
+- `supports`
+- `supersedes`
+
+V2 Core uses `contradicts` and `supersedes` for recall warnings. Other relation
+types are stored and probeable but do not change context-pack ranking.
+
+Important fields:
+
+- `scope`: partitions relation lookup by workspace, project, user, session, or
+  global scope.
+- `fromId` / `toId`: memory item IDs connected by the relation.
+- `validFrom` / `validUntil`: optional relation validity window.
+- `sourceEventIds`: evidence supporting the relation.
+
+The CLI appends an audit evidence event before adding a relation when no caller
+source is supplied.
+
 ## Verification Records
 
 `VerificationRecord` tracks checks against memory items.
@@ -125,8 +159,7 @@ Supported statuses:
 - `warning`
 
 V1.1 retrieves the latest record for packed item IDs and includes non-passed
-statuses in `ContextPack.verificationWarnings`. It does not validate citations
-against live workspace state or check branches.
+statuses in `ContextPack.verificationWarnings`.
 
 ## Session State
 
@@ -154,6 +187,37 @@ resources do not collide. The resource tree is local SQLite + FTS only; it does
 not introduce connector sync, vector storage, graph storage, or a cloud
 provider.
 
+## Recall Warnings
+
+`RecallWarning` is an additive context-pack warning. V2 Core does not filter
+items out of packs when risk is detected.
+
+Supported warning kinds:
+
+- `citation_missing`
+- `temporal_contradiction`
+- `temporal_supersession`
+- `branch_drift`
+- `commit_drift`
+- `file_missing`
+- `file_hash_mismatch`
+
+Citation warnings are generated when packed facts, session state, or workspace
+resources reference source event IDs that are missing from the evidence ledger.
+Temporal warnings are generated from active scoped relations. Drift warnings are
+generated only when a context-pack request provides enough local workspace
+provenance.
+
+Drift metadata keys:
+
+| Key | Meaning |
+| --- | --- |
+| `workspacePath` | Optional item-specific workspace root. |
+| `gitBranch` | Branch captured with the memory item. |
+| `gitCommit` | Commit captured with the memory item. |
+| `filePath` | Workspace-relative or absolute file path. |
+| `contentSha256` | Expected file content hash. |
+
 ## Context Packs
 
 `ContextPack` is the injected retrieval output.
@@ -164,9 +228,11 @@ Important fields:
 - `budgetTokens`: requested budget.
 - `estimatedTokens`: pack estimate.
 - `items`: core, evidence, fact, session, or resource items ranked by
-  TypeScript store/router logic with citations.
+  TypeScript store/router logic with citations and metadata.
 - `verificationWarnings`: latest failed, stale, unknown, or warning records for
   items included in the pack.
+- `recallWarnings`: missing citation, temporal relation, or local drift warnings
+  for packed items.
 
 Router policies:
 
@@ -187,7 +253,9 @@ The current SQLite projection stores:
 - `semantic_facts` plus `fact_fts`
 - `verification_records`
 - `session_states` plus `session_state_fts`
+- `temporal_relations`
 - `workspace_resources` plus `workspace_resource_fts`
 
-SQLite is the V1/V1.1 storage boundary. Do not add a vector DB, graph DB, or
-cloud memory provider during local-first work.
+SQLite is the V1/V1.1/V2 Core storage boundary. Do not add a vector DB, graph
+DB, cloud memory provider, connector sync, or LLM extraction dependency during
+local-first work.

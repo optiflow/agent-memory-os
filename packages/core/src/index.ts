@@ -1,4 +1,5 @@
 export { createContextPack, estimateTokens } from "./contextPacker.js";
+export { createDriftWarnings, createRecallWarning } from "./recallWarnings.js";
 export { DefaultContextRouter } from "./router.js";
 export type {
   ContextPack,
@@ -15,6 +16,8 @@ export type {
   MemoryScopeType,
   MemoryStore,
   Metadata,
+  RecallWarning,
+  RecallWarningKind,
   SearchResult,
   SearchResultKind,
   SemanticFact,

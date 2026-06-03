@@ -1,4 +1,5 @@
 import { createContextPack } from "./contextPacker.js";
+import { createDriftWarnings } from "./recallWarnings.js";
 import type {
   ContextPack,
   ContextRouter,
@@ -27,7 +28,7 @@ function sessionStateToResult(state: SessionState): SearchResult {
     score: state.status === "active" ? 1.3 : 1.1,
     citation: `session:${state.id}`,
     timestamp: state.updatedAt,
-    metadata: state.metadata,
+    metadata: { ...state.metadata, sourceEventIds: state.sourceEventIds },
   };
 }
 
@@ -74,12 +75,16 @@ export class DefaultContextRouter implements ContextRouter {
       includeCore: true,
       maxResults: 16,
     });
-    const verificationWarnings = await this.store.getVerificationWarnings(
-      draftPack.items.map((item) => item.id),
-    );
+    const packedItemIds = draftPack.items.map((item) => item.id);
+    const [verificationWarnings, storedRecallWarnings] = await Promise.all([
+      this.store.getVerificationWarnings(packedItemIds),
+      this.store.getRecallWarnings(packedItemIds, request.scope),
+    ]);
+    const driftWarnings = createDriftWarnings(draftPack.items, request.workspacePath);
 
     return {
       ...draftPack,
+      recallWarnings: [...storedRecallWarnings, ...driftWarnings],
       verificationWarnings,
     };
   }

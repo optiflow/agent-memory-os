@@ -17,7 +17,8 @@ Core principle:
 | Area | Current state |
 | --- | --- |
 | Local memory store | SQLite + FTS with evidence, facts, projections, and verification. |
-| Context injection | Bounded context packs with citations, budgets, policies, and warnings. |
+| Recall safety | V2 Core warnings for citations, temporal relations, and local drift. |
+| Context injection | Bounded context packs with citations, budgets, policies, and verification/recall warnings. |
 | CLI bridge | JSON stdin/stdout commands for smoke tests and adapter delegation. |
 | Evaluation | Lint, types, tests, evals, benchmarks, docs guard, and adapter checks. |
 | Hermes adapter | Local adapter/CLI smoke proof only, not production Hermes validation. |
@@ -31,14 +32,15 @@ Agent Memory OS is built for safer coding-agent memory, not generic RAG. It:
   context as distinct memory views;
 - searches local SQLite/FTS data instead of depending on a vector database,
   graph database, cloud provider, or LLM extraction step;
-- builds cited context packs with explicit token budgets and verification
-  warnings;
+- builds cited context packs with explicit token budgets, verification warnings,
+  and V2 Core recall warnings;
 - keeps Python limited to the thin Hermes plugin boundary while TypeScript owns
   memory behavior.
 
 ## What Works Today
 
-V1 and V1.1 are implemented as a local-first foundation:
+V1, V1.1, and V2 Core recall safety are implemented as a local-first
+foundation:
 
 | Surface | Implemented behavior |
 | --- | --- |
@@ -48,7 +50,9 @@ V1 and V1.1 are implemented as a local-first foundation:
 | Context packs | Bounded, cited memory packs with `auto`, `task`, and `workspace` router policies. |
 | Verification | Status records with latest warnings included in context packs. |
 | Workspace memory | Browseable resources keyed by scope and URI. |
-| CLI | Eight JSON commands for seeding, writing, search, packing, projections, browsing, and verification. |
+| Temporal relations | Scoped relation records for contradiction and supersession warnings. |
+| Drift checks | Optional local git/file warnings when context packs receive workspace provenance. |
+| CLI | Ten JSON commands for seeding, writing, search, packing, projections, browsing, verification, and relation probing. |
 | Hermes boundary | A root plugin shim and nested Python adapter that delegate memory work to the TypeScript CLI. |
 
 ## What It Does Not Claim
@@ -59,11 +63,13 @@ V1/V1.1 intentionally does not include:
 - a vector database, graph database, or cloud memory provider;
 - LLM-based fact extraction or reflection;
 - connector sync, social memory, or shared/federated memory;
-- branch/workspace drift checks or citation validation against live code state;
+- automatic filtering of risky memory from context packs;
+- production-grade temporal graph reasoning beyond scoped local relations;
 - a second Hermes memory provider.
 
 Those ideas stay behind the V2+ roadmap until the local evidence, retrieval,
-context-pack, verification, CLI, projection, and adapter foundations are stable.
+context-pack, verification, recall-safety, CLI, projection, and adapter
+foundations are stable.
 
 ## Try It Locally
 
@@ -117,4 +123,5 @@ request and response contracts, use the
 | Phase 0 | Local adapter alignment | Plugin shim, registration, tool schemas, hook fixture, and smoke proof. |
 | Phase 1 | Implemented V1 foundation | Evidence, facts, FTS retrieval, context packs, verification, CLI, tests, and adapter. |
 | Phase 1.1 | Implemented hardening | Session state, workspace resources, router policies, and verification warnings. |
-| Phase 2+ | Deferred design | Temporal recall, contradiction handling, reflection, handoff, sync, and federation. |
+| Phase 2 Core | Implemented recall safety | Temporal relations, citation validation, drift warnings, and recall warnings. |
+| Phase 2+ | Deferred design | Reflection, handoff, sync, social memory, and federation. |

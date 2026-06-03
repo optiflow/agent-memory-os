@@ -12,6 +12,7 @@ describe("createContextPack", () => {
           content: "The user prefers Biome as the only formatter and linter.",
           score: 0.8,
           citation: "fact:fact_1",
+          metadata: { sourceEventIds: ["event_1"] },
         },
         {
           id: "evidence_1",
@@ -38,6 +39,10 @@ describe("createContextPack", () => {
     expect(pack.items.map((item) => item.id)).toEqual(["core_1", "fact_1"]);
     expect(pack.estimatedTokens).toBeLessThanOrEqual(60);
     expect(pack.items[0]?.citation).toBe("core:core_1");
+    expect(pack.items.find((item) => item.id === "fact_1")?.metadata).toEqual({
+      sourceEventIds: ["event_1"],
+    });
+    expect(pack.recallWarnings).toEqual([]);
   });
 
   it("returns a positive token estimate for empty strings", () => {

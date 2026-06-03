@@ -15,5 +15,10 @@ describe("local memory benchmark evaluation", () => {
     expect(report.metrics.budgetCompliance).toBe(1);
     expect(report.metrics.evidenceCoverage).toBe(1);
     expect(report.metrics.overallScore).toBe(1);
+    expect(
+      report.cases
+        .find((result) => result.id === "recall-safety-warning")
+        ?.contextPack.recallWarnings.map((warning) => warning.kind),
+    ).toContain("temporal_supersession");
   });
 });

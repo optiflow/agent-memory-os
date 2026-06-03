@@ -4,12 +4,14 @@ import type {
   EvidenceEvent,
   SemanticFact,
   SessionState,
+  TemporalRelation,
   WorkspaceResource,
 } from "@agent-memory-os/core";
 
 export type BenchmarkTrack =
   | "conversation"
   | "environment"
+  | "recall_safety"
   | "session_state"
   | "workspace_resource"
   | "write_read";
@@ -19,6 +21,7 @@ export interface BenchmarkSeed {
   evidenceEvents: EvidenceEvent[];
   semanticFacts: SemanticFact[];
   sessionStates?: SessionState[];
+  temporalRelations?: TemporalRelation[];
   workspaceResources?: WorkspaceResource[];
 }
 

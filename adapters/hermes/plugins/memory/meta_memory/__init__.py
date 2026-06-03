@@ -213,8 +213,58 @@ class MetaMemoryProvider(MemoryProvider):
                         "query": {"type": "string", "minLength": 1},
                         "budgetTokens": {"type": "integer", "minimum": 1},
                         "policy": {"type": "string", "enum": ["auto", "task", "workspace"]},
+                        "workspacePath": {"type": "string", "minLength": 1},
                     },
                     "required": ["query"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "add_relation",
+                "description": "Add a scoped temporal relation between memory items.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "fromId": {"type": "string", "minLength": 1},
+                        "toId": {"type": "string", "minLength": 1},
+                        "relation": {
+                            "type": "string",
+                            "enum": [
+                                "contradicts",
+                                "derives",
+                                "extends",
+                                "supports",
+                                "supersedes",
+                            ],
+                        },
+                        "validFrom": {"type": "string", "minLength": 1},
+                        "validUntil": {"type": "string", "minLength": 1},
+                        "sourceEventIds": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["fromId", "toId", "relation"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "probe_relations",
+                "description": "Inspect scoped temporal relations for a memory item.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "targetId": {"type": "string", "minLength": 1},
+                        "relation": {
+                            "type": "string",
+                            "enum": [
+                                "contradicts",
+                                "derives",
+                                "extends",
+                                "supports",
+                                "supersedes",
+                            ],
+                        },
+                        "limit": {"type": "integer", "minimum": 1},
+                    },
+                    "required": ["targetId"],
                     "additionalProperties": False,
                 },
             },
@@ -313,7 +363,9 @@ class MetaMemoryProvider(MemoryProvider):
             return json.dumps(self.status(), ensure_ascii=False)
 
         command_by_tool = {
+            "add_relation": "add-relation",
             "context_pack": "context-pack",
+            "probe_relations": "probe-relations",
             "remember": "remember",
             "search": "search",
             "upsert_session_state": "upsert-session-state",

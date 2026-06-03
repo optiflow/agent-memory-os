@@ -54,6 +54,10 @@ export async function seedBenchmarkCase(
     await store.upsertSessionState(state);
   }
 
+  for (const relation of benchmarkCase.seed.temporalRelations ?? []) {
+    await store.addTemporalRelation(relation);
+  }
+
   for (const resource of benchmarkCase.seed.workspaceResources ?? []) {
     await store.upsertWorkspaceResource(resource);
   }

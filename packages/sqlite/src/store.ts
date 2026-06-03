@@ -5,12 +5,15 @@ import type {
   MemoryScope,
   MemoryStore,
   Metadata,
+  RecallWarning,
   SearchResult,
   SemanticFact,
   SessionState,
+  TemporalRelation,
   VerificationRecord,
   WorkspaceResource,
 } from "@agent-memory-os/core";
+import { createRecallWarning } from "@agent-memory-os/core";
 import { SCHEMA_SQL } from "./migrations.js";
 
 function metadataToJson(metadata: Metadata | undefined): string {
@@ -23,6 +26,13 @@ function metadataFromJson(value: unknown): Metadata {
   }
 
   return JSON.parse(value) as Metadata;
+}
+
+function metadataWithSourceEventIds(
+  metadata: Metadata | undefined,
+  sourceEventIds: string[],
+): Metadata {
+  return { ...(metadata ?? {}), sourceEventIds };
 }
 
 function stringArrayFromJson(value: unknown): string[] {
@@ -168,6 +178,30 @@ export class SQLiteMemoryStore implements MemoryStore {
       );
 
     return fact;
+  }
+
+  async addTemporalRelation(relation: TemporalRelation): Promise<TemporalRelation> {
+    this.database
+      .prepare(
+        `INSERT INTO temporal_relations (
+          id, scope_type, scope_id, from_id, to_id, relation, valid_from, valid_until,
+          source_event_ids_json, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        relation.id,
+        relation.scope.type,
+        relation.scope.id,
+        relation.fromId,
+        relation.toId,
+        relation.relation,
+        relation.validFrom ?? null,
+        relation.validUntil ?? null,
+        JSON.stringify(relation.sourceEventIds),
+        metadataToJson(relation.metadata),
+      );
+
+    return relation;
   }
 
   async upsertCoreBlock(block: CoreMemoryBlock): Promise<CoreMemoryBlock> {
@@ -377,8 +411,8 @@ export class SQLiteMemoryStore implements MemoryStore {
     const factRows = this.database
       .prepare(
         `SELECT semantic_facts.id, semantic_facts.subject, semantic_facts.predicate,
-          semantic_facts.object, semantic_facts.confidence, semantic_facts.metadata_json,
-          bm25(fact_fts) AS rank
+          semantic_facts.object, semantic_facts.confidence,
+          semantic_facts.source_event_ids_json, semantic_facts.metadata_json, bm25(fact_fts) AS rank
          FROM fact_fts
          JOIN semantic_facts ON semantic_facts.id = fact_fts.id
          WHERE fact_fts MATCH ?
@@ -390,7 +424,8 @@ export class SQLiteMemoryStore implements MemoryStore {
       .prepare(
         `SELECT session_states.id, session_states.status, session_states.current_goal,
           session_states.summary, session_states.working_set_json, session_states.updated_at,
-          session_states.metadata_json, bm25(session_state_fts) AS rank
+          session_states.source_event_ids_json, session_states.metadata_json,
+          bm25(session_state_fts) AS rank
          FROM session_state_fts
          JOIN session_states ON session_states.id = session_state_fts.id
           AND session_states.scope_type = session_state_fts.scope_type
@@ -404,7 +439,8 @@ export class SQLiteMemoryStore implements MemoryStore {
       .prepare(
         `SELECT workspace_resources.uri, workspace_resources.kind, workspace_resources.title,
           workspace_resources.content, workspace_resources.updated_at,
-          workspace_resources.metadata_json, bm25(workspace_resource_fts) AS rank
+          workspace_resources.source_event_ids_json, workspace_resources.metadata_json,
+          bm25(workspace_resource_fts) AS rank
          FROM workspace_resource_fts
          JOIN workspace_resources ON workspace_resources.uri = workspace_resource_fts.uri
           AND workspace_resources.scope_type = workspace_resource_fts.scope_type
@@ -434,7 +470,10 @@ export class SQLiteMemoryStore implements MemoryStore {
           content: `${textValue(row, "subject")} ${textValue(row, "predicate")} ${textValue(row, "object")}`,
           score: sqliteRankToScore(numberValue(row, "rank")) * numberValue(row, "confidence"),
           citation: `fact:${id}`,
-          metadata: metadataFromJson(row.metadata_json),
+          metadata: metadataWithSourceEventIds(
+            metadataFromJson(row.metadata_json),
+            stringArrayFromJson(row.source_event_ids_json),
+          ),
         };
       }),
       ...sessionRows.map((row) => ({
@@ -449,7 +488,10 @@ export class SQLiteMemoryStore implements MemoryStore {
         score: sqliteRankToScore(numberValue(row, "rank")),
         citation: `session:${textValue(row, "id")}`,
         timestamp: textValue(row, "updated_at"),
-        metadata: metadataFromJson(row.metadata_json),
+        metadata: metadataWithSourceEventIds(
+          metadataFromJson(row.metadata_json),
+          stringArrayFromJson(row.source_event_ids_json),
+        ),
       })),
       ...resourceRows.map((row) => ({
         id: textValue(row, "uri"),
@@ -461,12 +503,211 @@ export class SQLiteMemoryStore implements MemoryStore {
         score: sqliteRankToScore(numberValue(row, "rank")),
         citation: `resource:${textValue(row, "uri")}`,
         timestamp: textValue(row, "updated_at"),
-        metadata: metadataFromJson(row.metadata_json),
+        metadata: metadataWithSourceEventIds(
+          metadataFromJson(row.metadata_json),
+          stringArrayFromJson(row.source_event_ids_json),
+        ),
       })),
     ]
       .slice()
       .sort((left, right) => right.score - left.score)
       .slice(0, normalizedLimit);
+  }
+
+  async getTemporalRelationsForTarget(
+    targetId: string,
+    options: {
+      relation?: TemporalRelation["relation"];
+      scope?: MemoryScope;
+      limit?: number;
+    } = {},
+  ): Promise<TemporalRelation[]> {
+    const normalizedLimit = normalizeLimit(options.limit ?? 20);
+
+    if (normalizedLimit === 0) {
+      return [];
+    }
+
+    const relationClause = options.relation ? " AND relation = ?" : "";
+    const relationValues = options.relation ? [options.relation] : [];
+    const rows = this.database
+      .prepare(
+        `SELECT id, scope_type, scope_id, from_id, to_id, relation, valid_from, valid_until,
+          source_event_ids_json, metadata_json
+         FROM temporal_relations
+         WHERE (from_id = ? OR to_id = ?)${scopeClause(options.scope)}${relationClause}
+         ORDER BY id ASC
+         LIMIT ?`,
+      )
+      .all(targetId, targetId, ...scopeValues(options.scope), ...relationValues, normalizedLimit);
+
+    return rows.map(temporalRelationFromRow);
+  }
+
+  async getRecallWarnings(targetIds: string[], scope?: MemoryScope): Promise<RecallWarning[]> {
+    const uniqueTargetIds = uniqueStrings(targetIds);
+
+    if (uniqueTargetIds.length === 0) {
+      return [];
+    }
+
+    return [
+      ...this.getSourceCitationWarnings(uniqueTargetIds, scope),
+      ...this.getTemporalRecallWarnings(uniqueTargetIds, scope),
+    ];
+  }
+
+  private getSourceCitationWarnings(targetIds: string[], scope?: MemoryScope): RecallWarning[] {
+    const placeholders = targetIds.map(() => "?").join(", ");
+    const sourceRefs: Array<{ sourceEventIds: string[]; targetId: string }> = [];
+    const factRows = this.database
+      .prepare(
+        `SELECT id, source_event_ids_json
+         FROM semantic_facts
+         WHERE id IN (${placeholders})`,
+      )
+      .all(...targetIds);
+    const sessionRows = this.database
+      .prepare(
+        `SELECT id, source_event_ids_json
+         FROM session_states
+         WHERE id IN (${placeholders})${scopeClause(scope)}`,
+      )
+      .all(...targetIds, ...scopeValues(scope));
+    const resourceRows = this.database
+      .prepare(
+        `SELECT uri, source_event_ids_json
+         FROM workspace_resources
+         WHERE uri IN (${placeholders})${scopeClause(scope)}`,
+      )
+      .all(...targetIds, ...scopeValues(scope));
+
+    for (const row of factRows) {
+      sourceRefs.push({
+        targetId: textValue(row, "id"),
+        sourceEventIds: stringArrayFromJson(row.source_event_ids_json),
+      });
+    }
+
+    for (const row of sessionRows) {
+      sourceRefs.push({
+        targetId: textValue(row, "id"),
+        sourceEventIds: stringArrayFromJson(row.source_event_ids_json),
+      });
+    }
+
+    for (const row of resourceRows) {
+      sourceRefs.push({
+        targetId: textValue(row, "uri"),
+        sourceEventIds: stringArrayFromJson(row.source_event_ids_json),
+      });
+    }
+
+    const sourceEventIds = uniqueStrings(
+      sourceRefs.flatMap((sourceRef) => sourceRef.sourceEventIds),
+    );
+    const existingSourceEventIds = new Set<string>();
+    if (sourceEventIds.length > 0) {
+      const sourcePlaceholders = sourceEventIds.map(() => "?").join(", ");
+      const sourceRows = this.database
+        .prepare(`SELECT id FROM evidence_events WHERE id IN (${sourcePlaceholders})`)
+        .all(...sourceEventIds);
+
+      for (const row of sourceRows) {
+        existingSourceEventIds.add(textValue(row, "id"));
+      }
+    }
+
+    const warnings: RecallWarning[] = [];
+    for (const sourceRef of sourceRefs) {
+      if (sourceRef.sourceEventIds.length === 0) {
+        warnings.push(
+          createRecallWarning({
+            kind: "citation_missing",
+            targetId: sourceRef.targetId,
+            message: "Memory item has no source event IDs.",
+            metadata: { sourceEventIds: [] },
+          }),
+        );
+        continue;
+      }
+
+      for (const sourceEventId of sourceRef.sourceEventIds) {
+        if (existingSourceEventIds.has(sourceEventId)) {
+          continue;
+        }
+
+        warnings.push(
+          createRecallWarning({
+            kind: "citation_missing",
+            targetId: sourceRef.targetId,
+            message: `Memory item references missing source event ${sourceEventId}.`,
+            metadata: { missingSourceEventId: sourceEventId },
+          }),
+        );
+      }
+    }
+
+    return warnings;
+  }
+
+  private getTemporalRecallWarnings(targetIds: string[], scope?: MemoryScope): RecallWarning[] {
+    const targetIdSet = new Set(targetIds);
+    const warnings: RecallWarning[] = [];
+
+    for (const targetId of targetIds) {
+      for (const relation of this.getTemporalRelationsForTargetSync(targetId, scope)) {
+        if (!isActiveTemporalRelation(relation)) {
+          continue;
+        }
+
+        if (relation.relation === "contradicts") {
+          const relatedId = relation.fromId === targetId ? relation.toId : relation.fromId;
+          warnings.push(
+            createRecallWarning({
+              kind: "temporal_contradiction",
+              targetId,
+              message: `Memory item ${targetId} has an active contradiction with ${relatedId}.`,
+              relatedIds: [relatedId],
+              metadata: { relationId: relation.id },
+            }),
+          );
+          continue;
+        }
+
+        if (relation.relation === "supersedes" && relation.toId === targetId) {
+          warnings.push(
+            createRecallWarning({
+              kind: "temporal_supersession",
+              targetId,
+              message: `Memory item ${targetId} has been superseded by ${relation.fromId}.`,
+              relatedIds: [relation.fromId],
+              metadata: { relationId: relation.id },
+            }),
+          );
+        }
+      }
+    }
+
+    return dedupeWarnings(warnings).filter((warning) => targetIdSet.has(warning.targetId));
+  }
+
+  private getTemporalRelationsForTargetSync(
+    targetId: string,
+    scope?: MemoryScope,
+  ): TemporalRelation[] {
+    const rows = this.database
+      .prepare(
+        `SELECT id, scope_type, scope_id, from_id, to_id, relation, valid_from, valid_until,
+          source_event_ids_json, metadata_json
+         FROM temporal_relations
+         WHERE (from_id = ? OR to_id = ?)
+          AND relation IN ('contradicts', 'supersedes')${scopeClause(scope)}
+         ORDER BY id ASC`,
+      )
+      .all(targetId, targetId, ...scopeValues(scope));
+
+    return rows.map(temporalRelationFromRow);
   }
 
   async recordVerification(record: VerificationRecord): Promise<VerificationRecord> {
@@ -526,6 +767,47 @@ function sqliteRankToScore(rank: number): number {
   return 1 / (1 + Math.abs(rank));
 }
 
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function timestampIsBeforeOrEqual(timestamp: string, nowMs: number): boolean {
+  const parsed = Date.parse(timestamp);
+
+  return Number.isNaN(parsed) || parsed <= nowMs;
+}
+
+function timestampIsAfterOrEqual(timestamp: string, nowMs: number): boolean {
+  const parsed = Date.parse(timestamp);
+
+  return Number.isNaN(parsed) || parsed >= nowMs;
+}
+
+function isActiveTemporalRelation(relation: TemporalRelation): boolean {
+  const nowMs = Date.now();
+
+  return (
+    (relation.validFrom === undefined || timestampIsBeforeOrEqual(relation.validFrom, nowMs)) &&
+    (relation.validUntil === undefined || timestampIsAfterOrEqual(relation.validUntil, nowMs))
+  );
+}
+
+function dedupeWarnings(warnings: RecallWarning[]): RecallWarning[] {
+  const seen = new Set<string>();
+  const deduped: RecallWarning[] = [];
+
+  for (const warning of warnings) {
+    if (seen.has(warning.id)) {
+      continue;
+    }
+
+    seen.add(warning.id);
+    deduped.push(warning);
+  }
+
+  return deduped;
+}
+
 function sessionStateFromRow(row: Record<string, unknown>): SessionState {
   return {
     id: textValue(row, "id"),
@@ -538,6 +820,23 @@ function sessionStateFromRow(row: Record<string, unknown>): SessionState {
     summary: textValue(row, "summary"),
     workingSet: stringArrayFromJson(row.working_set_json),
     updatedAt: textValue(row, "updated_at"),
+    sourceEventIds: stringArrayFromJson(row.source_event_ids_json),
+    metadata: metadataFromJson(row.metadata_json),
+  };
+}
+
+function temporalRelationFromRow(row: Record<string, unknown>): TemporalRelation {
+  return {
+    id: textValue(row, "id"),
+    scope: {
+      type: textValue(row, "scope_type") as TemporalRelation["scope"]["type"],
+      id: textValue(row, "scope_id"),
+    },
+    fromId: textValue(row, "from_id"),
+    toId: textValue(row, "to_id"),
+    relation: textValue(row, "relation") as TemporalRelation["relation"],
+    validFrom: optionalTextValue(row, "valid_from"),
+    validUntil: optionalTextValue(row, "valid_until"),
     sourceEventIds: stringArrayFromJson(row.source_event_ids_json),
     metadata: metadataFromJson(row.metadata_json),
   };

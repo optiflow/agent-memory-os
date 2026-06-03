@@ -35,7 +35,8 @@ Current Hermes documentation describes local plugins with:
 
 This adapter exposes `initialize(...)` as bridge setup only: read environment,
 prepare CLI and SQLite path configuration, and avoid owning memory behavior.
-The current registration wires the V1/V1.1 tools and the `on_session_end` hook.
+The current registration wires the V1/V1.1/V2 Core tools and the
+`on_session_end` hook.
 
 Additional lifecycle hooks should be added only when their Hermes signatures and
 local behavior are proven.
@@ -81,10 +82,12 @@ directory when a file-backed database path is missing.
 
 ## Adapter Tools
 
-The adapter currently exposes the V1/V1.1 tools:
+The adapter currently exposes the V1/V1.1/V2 Core tools:
 
 - `status`
 - `context_pack`
+- `add_relation`
+- `probe_relations`
 - `remember`
 - `search`
 - `upsert_session_state`
@@ -92,7 +95,7 @@ The adapter currently exposes the V1/V1.1 tools:
 - `browse_resources`
 - `verify`
 
-`handoff` and `reflect` are intentionally deferred to V2.
+`handoff` and `reflect` are intentionally deferred beyond V2 Core.
 
 Hermes tool schemas are intentionally narrower than the CLI contracts. For
 example, the `remember` tool exposes only `content`; the adapter supplies the
@@ -111,6 +114,8 @@ matching CLI command.
 | `on_memory_write` | `remember` | Mirrors explicit memory writes. |
 | `handle_tool_call("status")` | none | Reports adapter configuration without calling the CLI. |
 | `handle_tool_call("context_pack")` | `context-pack` | Manual context-pack inspection. |
+| `handle_tool_call("add_relation")` | `add-relation` | Temporal relation append. |
+| `handle_tool_call("probe_relations")` | `probe-relations` | Temporal relation inspection. |
 | `handle_tool_call("remember")` | `remember` | Explicit memory event append. |
 | `handle_tool_call("search")` | `search` | Local memory search. |
 | `handle_tool_call("upsert_session_state")` | `upsert-session-state` | Compact active task-state update. |

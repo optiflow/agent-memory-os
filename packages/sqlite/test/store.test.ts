@@ -173,6 +173,81 @@ describe("SQLiteMemoryStore", () => {
     }
   });
 
+  it("stores temporal relations by scope and emits recall warnings", async () => {
+    const store = new SQLiteMemoryStore();
+
+    try {
+      await store.appendEvidence({
+        id: "event_old",
+        kind: "explicit_memory",
+        actor: "user",
+        content: "Old memory evidence.",
+        timestamp: "2026-06-03T00:00:00.000Z",
+        scope: { type: "workspace", id: "agent-memory-os" },
+      });
+      await store.appendEvidence({
+        id: "event_new",
+        kind: "system_event",
+        actor: "system",
+        content: "New memory evidence.",
+        timestamp: "2026-06-03T00:00:00.000Z",
+        scope: { type: "workspace", id: "agent-memory-os" },
+      });
+      await store.addTemporalRelation({
+        id: "relation_1",
+        scope: { type: "workspace", id: "agent-memory-os" },
+        fromId: "fact_new",
+        toId: "fact_old",
+        relation: "supersedes",
+        sourceEventIds: ["event_new"],
+      });
+      await store.addTemporalRelation({
+        id: "relation_other_scope",
+        scope: { type: "workspace", id: "other" },
+        fromId: "fact_other",
+        toId: "fact_old",
+        relation: "contradicts",
+        sourceEventIds: ["event_new"],
+      });
+
+      const relations = await store.getTemporalRelationsForTarget("fact_old", {
+        scope: { type: "workspace", id: "agent-memory-os" },
+      });
+      const warnings = await store.getRecallWarnings(["fact_old"], {
+        type: "workspace",
+        id: "agent-memory-os",
+      });
+
+      expect(relations.map((relation) => relation.id)).toEqual(["relation_1"]);
+      expect(warnings.map((warning) => warning.kind)).toEqual(["temporal_supersession"]);
+      expect(JSON.stringify(warnings)).not.toContain("relation_other_scope");
+    } finally {
+      store.close();
+    }
+  });
+
+  it("warns when packed item source citations are missing", async () => {
+    const store = new SQLiteMemoryStore();
+
+    try {
+      await store.addSemanticFact({
+        id: "fact_missing_source",
+        subject: "roadmap",
+        predicate: "claims",
+        object: "citation validation is implemented",
+        confidence: 0.9,
+        sourceEventIds: ["event_missing"],
+      });
+
+      const warnings = await store.getRecallWarnings(["fact_missing_source"]);
+
+      expect(warnings.map((warning) => warning.kind)).toEqual(["citation_missing"]);
+      expect(warnings[0]?.metadata).toEqual({ missingSourceEventId: "event_missing" });
+    } finally {
+      store.close();
+    }
+  });
+
   it("returns latest non-passed verification warnings for requested targets", async () => {
     const store = new SQLiteMemoryStore();
 

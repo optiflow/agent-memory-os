@@ -53,13 +53,15 @@ Expected result:
   workspace-resource records.
 - `context-pack` returns a bounded `contextPack`.
 - The context pack includes the seeded Biome memory with citations.
+- The context pack includes `verificationWarnings` and `recallWarnings` arrays,
+  even when they are empty.
 - V1.1 projections, such as session state and workspace resources, are present
   in the seeded local data.
 
 ## Repository Layout
 
 ```text
-packages/core      Domain types, context router, packer, verification policy
+packages/core      Domain types, context router, packer, warning policy
 packages/sqlite    SQLite schema, migrations, FTS search, local store
 packages/cli       JSON CLI bridge for Hermes and future adapters
 packages/evals     Deterministic eval and benchmark fixtures

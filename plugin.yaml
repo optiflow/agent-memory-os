@@ -5,6 +5,8 @@ provider_class: MetaMemoryProvider
 provides_tools:
   - status
   - context_pack
+  - add_relation
+  - probe_relations
   - remember
   - search
   - upsert_session_state

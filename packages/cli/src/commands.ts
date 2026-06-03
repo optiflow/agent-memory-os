@@ -8,6 +8,7 @@ import type {
   SemanticFact,
   SessionState,
   SessionStateStatus,
+  TemporalRelation,
   VerificationStatus,
   WorkspaceResource,
   WorkspaceResourceKind,
@@ -16,8 +17,10 @@ import { createVerificationRecord, DefaultContextRouter } from "@agent-memory-os
 import { SQLiteMemoryStore } from "@agent-memory-os/sqlite";
 
 const COMMAND_NAMES = [
+  "add-relation",
   "browse-resources",
   "context-pack",
+  "probe-relations",
   "remember",
   "search",
   "seed-sample",
@@ -61,6 +64,13 @@ const WORKSPACE_RESOURCE_KINDS = [
   "url",
 ] as const satisfies readonly WorkspaceResourceKind[];
 const CONTEXT_POLICIES = ["auto", "task", "workspace"] as const;
+const TEMPORAL_RELATIONS = [
+  "contradicts",
+  "derives",
+  "extends",
+  "supports",
+  "supersedes",
+] as const satisfies readonly TemporalRelation["relation"][];
 const EVIDENCE_ACTORS = [
   "assistant",
   "system",
@@ -230,6 +240,30 @@ function optionalContextPolicy(input: CommandInput): (typeof CONTEXT_POLICIES)[n
   throw new Error('Expected "policy" to be auto, task, or workspace');
 }
 
+function requireTemporalRelation(input: CommandInput): TemporalRelation["relation"] {
+  const value = input.relation;
+
+  if (isOneOf(TEMPORAL_RELATIONS, value)) {
+    return value;
+  }
+
+  throw new Error('Expected "relation" to be a supported temporal relation');
+}
+
+function optionalTemporalRelation(input: CommandInput): TemporalRelation["relation"] | undefined {
+  const value = input.relation;
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (isOneOf(TEMPORAL_RELATIONS, value)) {
+    return value;
+  }
+
+  throw new Error('Expected "relation" to be a supported temporal relation');
+}
+
 function defaultScope(input: CommandInput): MemoryScope {
   const scope = input.scope;
 
@@ -332,6 +366,7 @@ export async function runCommand(command: CommandName, input: CommandInput): Pro
           scope: defaultScope(input),
           budgetTokens: optionalPositiveInteger(input, "budgetTokens", 1200),
           policy: optionalContextPolicy(input),
+          workspacePath: optionalString(input, "workspacePath"),
         }),
       };
     }
@@ -345,6 +380,40 @@ export async function runCommand(command: CommandName, input: CommandInput): Pro
       });
 
       return { verification: await store.recordVerification(record) };
+    }
+
+    if (command === "add-relation") {
+      const fromId = requireString(input, "fromId");
+      const toId = requireString(input, "toId");
+      const relationName = requireTemporalRelation(input);
+      const auditEvent = await appendProjectionEvidence(
+        store,
+        input,
+        `Temporal relation added: ${fromId} ${relationName} ${toId}`,
+      );
+      const relation: TemporalRelation = {
+        id: `relation_${randomUUID()}`,
+        scope: defaultScope(input),
+        fromId,
+        toId,
+        relation: relationName,
+        validFrom: optionalString(input, "validFrom"),
+        validUntil: optionalString(input, "validUntil"),
+        sourceEventIds: sourceEventIdsWithAudit(input, auditEvent),
+        metadata: optionalMetadata(input),
+      };
+
+      return { event: auditEvent, relation: await store.addTemporalRelation(relation) };
+    }
+
+    if (command === "probe-relations") {
+      return {
+        relations: await store.getTemporalRelationsForTarget(requireString(input, "targetId"), {
+          relation: optionalTemporalRelation(input),
+          scope: defaultScope(input),
+          limit: optionalPositiveInteger(input, "limit", 20),
+        }),
+      };
     }
 
     if (command === "upsert-session-state") {

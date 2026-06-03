@@ -153,6 +153,8 @@ The adapter exposes these Hermes-facing tools:
 
 - `status`
 - `context_pack`
+- `add_relation`
+- `probe_relations`
 - `remember`
 - `search`
 - `upsert_session_state`
@@ -160,4 +162,4 @@ The adapter exposes these Hermes-facing tools:
 - `browse_resources`
 - `verify`
 
-`handoff` and `reflect` are intentionally deferred to V2.
+`handoff` and `reflect` are intentionally deferred beyond V2 Core.
