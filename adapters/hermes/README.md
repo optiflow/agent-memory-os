@@ -121,6 +121,6 @@ echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"bud
 ```
 
 These checks prove the local adapter, manifest, `initialize(...)`,
-`register(ctx)`, tool schemas, hook registration fixture, and CLI scaffold. They
+`register(ctx)`, tool schemas, hook registration fixture, and CLI bridge. They
 do not prove live Hermes plugin discovery, enablement, lifecycle hook execution,
 or production installation for a specific Hermes release.

@@ -1,7 +1,8 @@
 # Environment
 
 This repo is prepared for local-first Hermes memory development. Keep the
-environment simple until the adapter contract and v1 behavior are proven.
+environment simple while V1/V1.1 remains SQLite + FTS and adapter-boundary
+verified locally.
 
 ## Verified Local Baseline
 

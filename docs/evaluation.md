@@ -116,9 +116,9 @@ Major memory additions must add or update at least one benchmark case when they
 change retrieval, context packing, write preservation, verification policy, or
 the local storage behavior that affects memory quality.
 
-## Future V1 Behavior Gaps
+## Future Local Behavior Gaps
 
-Future v1 feature work should add tests for:
+Future local feature work should add tests for:
 
 - write path preserves evidence before derived facts;
 - adapter subprocess timeouts fail clearly;
@@ -150,5 +150,6 @@ The key acceptance criterion is not raw recall alone. The system must avoid
 stale, irrelevant, unsupported, or branch-invalid injection, and it must
 separate write-side preservation failures from retrieval failures.
 
-External benchmarks from the report should stay future-facing until v1 has
-local smoke proof plus a stable, tested Hermes integration path.
+External benchmarks from the report should stay future-facing until a target
+Hermes runtime has stable, tested plugin discovery, hook execution, and tool
+execution coverage.

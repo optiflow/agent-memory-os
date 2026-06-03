@@ -144,5 +144,5 @@ The current SQLite projection stores:
 - `session_states` plus `session_state_fts`
 - `workspace_resources` plus `workspace_resource_fts`
 
-SQLite is the v1 storage boundary. Do not add a vector DB, graph DB, or cloud
-memory provider during v1 prep.
+SQLite is the V1/V1.1 storage boundary. Do not add a vector DB, graph DB, or
+cloud memory provider during local-first work.

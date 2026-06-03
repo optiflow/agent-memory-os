@@ -43,7 +43,7 @@ pattern becomes an implementation requirement.
 
 ## Future Mapping
 
-- Future v1 additions must stay local-first and dependency-light.
+- Later local additions must stay local-first and dependency-light.
 - V2 may add temporal graph, contradiction handling, reflection, and handoff
   packets when recall safety requires them.
 - V3 may add social memory, connector sync, shared memory blocks, and federation

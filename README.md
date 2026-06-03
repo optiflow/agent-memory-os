@@ -11,10 +11,10 @@ The core idea is simple:
 
 ## What It Is
 
-This repo is a TypeScript-first v1 scaffold for building a safer coding-agent
-memory layer. It treats append-only evidence as the source of truth, then derives
-searchable facts, compact session state, workspace resources, and bounded
-context packs from that evidence.
+This repo is a TypeScript-first V1/V1.1 implementation for building a safer
+coding-agent memory layer. It treats append-only evidence as the source of truth,
+then derives searchable facts, compact session state, workspace resources, and
+bounded context packs from that evidence.
 
 The Python code exists only where Hermes needs a Python memory provider. Storage,
 ranking, routing, schemas, context packing, verification policy, tests, and the
@@ -22,15 +22,16 @@ CLI live in TypeScript packages.
 
 ## Status
 
-The local scaffold is implemented and testable. It includes a real SQLite/FTS
-store, TypeScript domain model, JSON stdin/stdout CLI, deterministic evals, and a
-thin Hermes adapter.
+The local implementation is testable. It includes a real SQLite/FTS store,
+TypeScript domain model, JSON stdin/stdout CLI, deterministic evals, and a thin
+Hermes adapter.
 
 The Hermes boundary is aligned to the current local plugin contract described by
 Hermes docs: `plugin.yaml` metadata, `register(ctx)` registration,
 `initialize(...)` bridge setup, lifecycle hook wiring, and JSON-style tool
-schemas. This repo has local smoke proof for the adapter boundary and CLI bridge
-only. It does not claim a live production Hermes installation has been tested.
+schemas with JSON-string tool results. This repo has local smoke proof for the
+adapter boundary and CLI bridge only. It does not claim a live production Hermes
+installation has been tested.
 
 ## What Works Today
 
@@ -49,14 +50,15 @@ only. It does not claim a live production Hermes installation has been tested.
   `browse-resources`, and `verify` commands.
 - Adapter-boundary Python checks and local smoke proof for the Hermes contract.
 
-## What Is Out Of V1
+## What Is Out Of V1/V1.1
 
-V1 intentionally does not include a vector database, graph database, cloud memory
-provider, LLM extraction dependency, reflection engine, connector sync, social
-memory, or a second Hermes provider.
+V1/V1.1 intentionally does not include a vector database, graph database, cloud
+memory provider, LLM extraction dependency, reflection engine, connector sync,
+social memory, or a second Hermes provider.
 
 Those ideas stay behind the v2+ roadmap until the local evidence, retrieval,
-context-pack, verification, CLI, and adapter boundary are stable.
+context-pack, verification, session/resource projections, CLI, and adapter
+boundary are stable.
 
 ## Quickstart
 

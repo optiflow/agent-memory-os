@@ -23,7 +23,7 @@ Until this is loaded and exercised by a real target Hermes version, adapter work
 remains a local contract alignment and smoke-test target, not a production
 Hermes installation claim.
 
-## Phase 1: Local-First V1 Scaffold
+## Phase 1: Local-First V1 Implementation
 
 V1 is the minimum auditable Hermes meta-provider:
 
@@ -54,9 +54,9 @@ These are implemented as local-first, dependency-light projections:
 - local adapter smoke fixture for manifest shape, `initialize(...)`,
   `register(ctx)`, tool schemas, handler delegation, and hook signatures.
 
-Any future v1 additions must stay local-first, auditable, and dependency-light.
-Session state and workspace tree work should not introduce a vector DB, graph DB,
-cloud memory provider, connector sync, or LLM extraction dependency.
+Any later local-first additions must stay auditable and dependency-light.
+Session state and workspace tree work must continue to avoid vector DBs, graph
+DBs, cloud memory providers, connector sync, and LLM extraction dependencies.
 
 This is still not a production Hermes installation claim until a target Hermes
 checkout loads the plugin and exercises the hooks/tools end to end.

@@ -27,6 +27,10 @@ If neither `dbPath` nor `META_MEMORY_DB` is set, direct CLI calls use `:memory:`
 Those calls are ephemeral and are not equivalent to the Hermes adapter's
 file-backed default database.
 
+`scope` partitions local memory. The default workspace scope is suitable for
+smoke tests, but real workspace, project, and session callers should pass a
+stable `type` plus `id` so unrelated memories do not collide.
+
 ## `remember`
 
 Append an evidence event.
@@ -48,8 +52,9 @@ Returns:
 
 ## `search`
 
-Search local evidence and facts with SQLite FTS. Core memory blocks are included
-through `context-pack`, not raw `search`.
+Search local evidence, facts, active session state, and workspace resources with
+SQLite FTS. Core memory blocks are included through `context-pack`, not raw
+`search`.
 
 Required:
 
@@ -58,6 +63,7 @@ Required:
 Optional:
 
 - `limit`: positive integer, defaults to `10`.
+- `scope`: narrows FTS search to a memory scope.
 
 Returns:
 
@@ -74,7 +80,9 @@ Required:
 Optional:
 
 - `budgetTokens`: positive integer, defaults to `1200`.
-- `policy`: `auto`, `task`, or `workspace`; defaults to `auto`.
+- `policy`: `auto`, `task`, or `workspace`; defaults to `auto`. `auto`
+  includes active session state and workspace resources, `task` excludes
+  workspace resource search, and `workspace` excludes active session state.
 - `scope`
 
 Returns:
@@ -101,8 +109,8 @@ Returns:
 
 ## `upsert-session-state`
 
-Create or update compact active task state. The CLI appends an audit evidence
-event before updating the projection.
+Create or update compact active task state. This is a projection write: the CLI
+appends an audit evidence event before updating the projection table.
 
 Required:
 
@@ -124,8 +132,8 @@ Returns:
 
 ## `upsert-resource`
 
-Create or update a browseable workspace resource. The CLI appends an audit
-evidence event before updating the projection.
+Create or update a browseable workspace resource. This is a projection write:
+the CLI appends an audit evidence event before updating the projection table.
 
 Required:
 

@@ -42,14 +42,14 @@ provider boundary. They should not become separate Hermes providers.
 
 | Plane | Current status | Purpose |
 | --- | --- | --- |
-| Pinned core memory | V1 scaffold | High-authority rules and durable facts that should not require retrieval. |
-| Evidence ledger | V1 scaffold | Append-only events for messages, tool calls, outcomes, file edits, and explicit memory writes. |
-| Typed semantic facts | V1 scaffold | Cited fact records separated from raw evidence. |
-| Local retrieval | V1.1 scaffold | SQLite + FTS over evidence, facts, session state, and workspace resources. |
-| Context router | V1.1 scaffold | Bounded context packs with `auto`, `task`, and `workspace` policies. |
-| Verification records | V1.1 scaffold | Writable statuses plus latest non-passed warnings in context packs. |
-| Active session state | V1.1 scaffold | Compact current-task state without LLM extraction. |
-| Workspace tree | V1.1 scaffold | Browseable project/resource memory without a graph or cloud dependency. |
+| Pinned core memory | V1 implemented | High-authority rules and durable facts that should not require retrieval. |
+| Evidence ledger | V1 implemented | Append-only events for messages, tool calls, outcomes, file edits, and explicit memory writes. |
+| Typed semantic facts | V1 implemented | Cited fact records separated from raw evidence. |
+| Local retrieval | V1.1 implemented | SQLite + FTS over evidence, facts, session state, and workspace resources. |
+| Context router | V1.1 implemented | Bounded context packs with `auto`, `task`, and `workspace` policies. |
+| Verification records | V1.1 implemented | Writable statuses plus latest non-passed warnings in context packs. |
+| Active session state | V1.1 implemented | Compact current-task state without LLM extraction. |
+| Workspace tree | V1.1 implemented | Browseable project/resource memory without a graph or cloud dependency. |
 | Temporal graph | V2 design | Validity windows, supersession, and relation-aware recall. |
 | Reflection | V2 design | Slow-path synthesis over evidence, facts, and temporal projections. |
 | Handoff and social memory | V2+ design | Multi-agent transfer packets and peer/identity memory. |
@@ -91,7 +91,7 @@ verification records for packed item IDs.
 
 ## Adapter Compatibility Risk
 
-Current repo code aligns the local adapter scaffold to `plugin.yaml`,
+Current repo code aligns the local adapter to `plugin.yaml`,
 `register(ctx)`, `initialize(...)`, provider tool schemas, and lifecycle hook
 wiring. This is local contract proof only. Before claiming production Hermes
 compatibility, verify a target Hermes checkout loads the plugin and exercises
