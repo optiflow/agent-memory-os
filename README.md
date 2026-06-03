@@ -111,7 +111,7 @@ Current commands:
 
 - `seed-sample`: create sample core, evidence, and fact records.
 - `remember`: append an evidence event.
-- `search`: search core memory, evidence, and facts.
+- `search`: search evidence and facts with SQLite FTS.
 - `context-pack`: build a bounded context pack for injection or inspection.
 - `verify`: record verification status for a memory item.
 

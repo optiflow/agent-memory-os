@@ -20,7 +20,7 @@ The repo already follows the right outer shape:
 - one Hermes provider, `meta_memory`;
 - TypeScript-owned memory model, SQLite/FTS store, routing, context packing,
   verification, CLI bridge, tests, and package orchestration;
-- a thin Python adapter that maps Hermes calls to TypeScript only;
+- a thin Python adapter that maps Hermes hooks and tools to TypeScript only;
 - SQLite + FTS as the local-first v1 store;
 - graph, reflection, and handoff work deferred.
 
@@ -40,7 +40,9 @@ Use these as design patterns, not dependencies:
 
 ## Product Sequencing
 
-1. Phase 0 proves the Hermes adapter contract for the target Hermes version.
+1. Phase 0 aligns the Hermes adapter to the local `plugin.yaml`, `register(ctx)`,
+   `initialize(...)`, hook, tool-schema, and CLI-delegation contract; live Hermes
+   runtime verification remains a separate target-version check.
 2. Phase 1 keeps the local evidence ledger, facts, FTS, context packs,
    verification records, CLI, and adapter auditable.
 3. Phase 1.1 designs active session state and workspace tree projections without
