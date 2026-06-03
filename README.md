@@ -25,10 +25,11 @@ The local scaffold is implemented and testable. It includes a real SQLite/FTS
 store, TypeScript domain model, JSON stdin/stdout CLI, deterministic evals, and a
 thin Hermes adapter scaffold.
 
-The Hermes adapter is not yet proven against a specific production Hermes plugin
-contract. Treat `adapters/hermes` as an integration scaffold until the target
-Hermes version confirms its metadata, registration, lifecycle, and tool-call
-shape.
+The Hermes boundary is aligned to the current local plugin contract described by
+Hermes docs: `plugin.yaml` metadata, `register(ctx)` registration,
+`initialize(...)` bridge setup, lifecycle hook wiring, and JSON-style tool
+schemas. This repo has local smoke proof for the adapter boundary and CLI bridge
+only. It does not claim a live production Hermes installation has been tested.
 
 ## What Works Today
 
@@ -42,7 +43,7 @@ shape.
   `warning` statuses.
 - A `meta-memory` CLI bridge with `seed-sample`, `remember`, `search`,
   `context-pack`, and `verify` commands.
-- Adapter-boundary Python checks for the Hermes scaffold.
+- Adapter-boundary Python checks and local smoke proof for the Hermes scaffold.
 
 ## What Is Out Of V1
 
@@ -93,7 +94,7 @@ Expected result:
 packages/core      Domain types, context router, packer, verification policy
 packages/sqlite    SQLite schema, migrations, FTS search, local store
 packages/cli       JSON CLI bridge for Hermes and future adapters
-adapters/hermes    Thin Python MemoryProvider plugin scaffold
+adapters/hermes    Thin Python Hermes plugin contract scaffold
 docs               Architecture, roadmap, evaluation, and install notes
 ```
 
@@ -136,9 +137,11 @@ Coding-agent operating instructions live in [AGENTS.md](AGENTS.md).
 
 ## Roadmap Direction
 
-Phase 0 proves the Hermes adapter contract. Phase 1 keeps the local evidence
-ledger, facts, FTS retrieval, context packs, verification records, CLI, and
-adapter auditable. Phase 1.1 may add active session state and workspace tree
-projections without graph, vector, cloud, or LLM dependencies. Phase 2+ is where
-temporal recall, contradiction handling, reflection, handoff packets, connector
-sync, and shared memory belong after the local system is proven.
+Phase 0 aligns the Hermes adapter contract to `plugin.yaml`, `register(ctx)`,
+`initialize(...)` bridge setup, lifecycle hooks, tool schemas, and local smoke
+proof. Phase 1 keeps the local evidence ledger, facts, FTS retrieval, context
+packs, verification records, CLI, and adapter auditable. Phase 1.1 may add
+active session state and workspace tree projections without graph, vector,
+cloud, or LLM dependencies. Phase 2+ is where temporal recall, contradiction
+handling, reflection, handoff packets, connector sync, and shared memory belong
+after the local system is proven.

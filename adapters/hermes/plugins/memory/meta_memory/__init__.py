@@ -12,11 +12,13 @@ import shlex
 import shutil
 import subprocess
 import threading
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 DEFAULT_DB_PATH = str(Path.home() / ".hermes" / "meta-memory.sqlite")
 DEFAULT_TIMEOUT_SECONDS = 20.0
+TOOLSET = "meta_memory"
 
 try:
     from agent.memory_provider import MemoryProvider
@@ -29,7 +31,7 @@ except Exception:  # pragma: no cover - lets the adapter compile outside Hermes.
 class MetaMemoryProvider(MemoryProvider):
     """Hermes MemoryProvider that delegates to the meta-memory CLI."""
 
-    name = "meta_memory"
+    name = TOOLSET
     display_name = "Agent Memory OS"
     description = "Local-first meta memory provider backed by TypeScript and SQLite + FTS."
 
@@ -37,6 +39,18 @@ class MetaMemoryProvider(MemoryProvider):
         self._cli = _read_cli()
         self._db_path = _read_db_path()
         self._timeout_seconds = _read_timeout_seconds()
+        self._session_id: str | None = None
+        self._hermes_home: str | None = None
+
+    def initialize(
+        self,
+        session_id: str | None = None,
+        hermes_home: str | Path | None = None,
+        **_: Any,
+    ) -> None:
+        self._session_id = session_id
+        self._hermes_home = str(hermes_home) if hermes_home is not None else None
+        self._ensure_db_parent()
 
     def is_available(self) -> bool:
         try:
@@ -100,12 +114,15 @@ class MetaMemoryProvider(MemoryProvider):
             },
         )
 
+    def on_session_end(self, **_: Any) -> None:
+        return None
+
     def get_tool_schemas(self) -> list[dict[str, Any]]:
         return [
             {
                 "name": "context_pack",
                 "description": "Build a bounded memory context pack for a query.",
-                "input_schema": {
+                "parameters": {
                     "type": "object",
                     "properties": {
                         "query": {"type": "string", "minLength": 1},
@@ -118,7 +135,7 @@ class MetaMemoryProvider(MemoryProvider):
             {
                 "name": "remember",
                 "description": "Append an explicit memory event.",
-                "input_schema": {
+                "parameters": {
                     "type": "object",
                     "properties": {"content": {"type": "string", "minLength": 1}},
                     "required": ["content"],
@@ -128,7 +145,7 @@ class MetaMemoryProvider(MemoryProvider):
             {
                 "name": "search",
                 "description": "Search local memory.",
-                "input_schema": {
+                "parameters": {
                     "type": "object",
                     "properties": {
                         "query": {"type": "string", "minLength": 1},
@@ -141,7 +158,7 @@ class MetaMemoryProvider(MemoryProvider):
             {
                 "name": "verify",
                 "description": "Record verification status for a memory item.",
-                "input_schema": {
+                "parameters": {
                     "type": "object",
                     "properties": {
                         "targetId": {"type": "string"},
@@ -263,6 +280,68 @@ def _process_error(process: subprocess.CompletedProcess[str]) -> str:
         return parsed["error"]
 
     return raw_error
+
+
+_provider: MetaMemoryProvider | None = None
+
+
+def initialize(*args: Any, **kwargs: Any) -> MetaMemoryProvider:
+    """Create the Hermes memory provider at plugin startup."""
+
+    global _provider
+    provider = MetaMemoryProvider()
+    provider.initialize(*args, **kwargs)
+    _provider = provider
+    return provider
+
+
+def register(ctx: Any) -> MetaMemoryProvider:
+    """Register the provider, tools, and session-end hook with Hermes."""
+
+    provider = _active_provider()
+    ctx.register_memory_provider(provider)
+
+    for schema in provider.get_tool_schemas():
+        tool_name = str(schema["name"])
+        ctx.register_tool(
+            name=tool_name,
+            toolset=TOOLSET,
+            schema=schema,
+            handler=_tool_handler(provider, tool_name),
+            description=str(schema["description"]),
+        )
+
+    ctx.register_hook("on_session_end", provider.on_session_end)
+    return provider
+
+
+def on_session_end(**kwargs: Any) -> None:
+    provider = _active_provider()
+    provider.on_session_end(**kwargs)
+
+
+def _active_provider() -> MetaMemoryProvider:
+    global _provider
+    if _provider is None:
+        _provider = MetaMemoryProvider()
+
+    return _provider
+
+
+def _tool_handler(
+    provider: MetaMemoryProvider,
+    name: str,
+) -> Callable[[dict[str, Any] | None], dict[str, Any]]:
+    def handle(params: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+        arguments: dict[str, Any] = {}
+        if params:
+            arguments.update(params)
+        if kwargs:
+            arguments.update(kwargs)
+
+        return provider.handle_tool_call(name, arguments)
+
+    return handle
 
 
 Provider = MetaMemoryProvider

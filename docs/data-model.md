@@ -53,6 +53,9 @@ Important fields:
 Hermes built-in `MEMORY.md` and `USER.md` remain separate from this store, but
 the adapter can mirror explicit memory writes into the v1 ledger.
 
+Hermes plugin tool schemas are boundary input schemas only. TypeScript domain
+types and SQLite migrations remain the source of truth for persisted memory.
+
 ## Semantic Facts
 
 `SemanticFact` stores typed, reusable claims:

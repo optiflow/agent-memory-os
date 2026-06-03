@@ -52,8 +52,14 @@ python3 -m unittest discover adapters/hermes/plugins/memory/meta_memory/test
 pnpm adapter:check
 ```
 
+These commands are local adapter-boundary smoke proof. They cover the
+`plugin.yaml` manifest fixture, absence of stale JSON metadata, `initialize(...)`
+bridge setup, `register(ctx)` wiring, the local `on_session_end` hook fixture,
+Hermes `parameters` tool schemas, and CLI delegation.
+
 Before real Hermes integration testing, verify the target Hermes plugin contract
-and update the smoke fixture to cover the actual discovery mechanism.
+against a live checkout. Local fixture coverage does not prove Hermes runtime
+discovery, enablement, or hook execution.
 
 ## Current Coverage
 
@@ -62,6 +68,10 @@ Current local tests cover:
 - FTS search returns evidence and facts;
 - context packing respects token budgets;
 - CLI seed and context-pack smoke behavior;
+- Hermes adapter metadata uses `plugin.yaml`;
+- adapter `initialize(...)` and `register(ctx)` wire the provider, v1 tools, and
+  `on_session_end` hook in a local fixture;
+- adapter tool schemas use the Hermes `parameters` shape;
 - adapter tool-call arguments cannot override configured `META_MEMORY_DB`;
 - adapter CLI failure handling.
 
@@ -110,7 +120,8 @@ Future v1 feature work should add tests for:
 - verification records can be retrieved and populated into packs when the router
   grows warning-aware injection;
 - adapter subprocess timeouts fail clearly;
-- real Hermes plugin discovery for a target Hermes version.
+- real Hermes plugin discovery, hook execution, and tool schema registration for
+  a target Hermes version.
 
 ## Quality Metrics
 
@@ -137,5 +148,5 @@ The key acceptance criterion is not raw recall alone. The system must avoid
 stale, irrelevant, unsupported, or branch-invalid injection, and it must
 separate write-side preservation failures from retrieval failures.
 
-External benchmarks from the report should stay future-facing until v1 has a
-stable Hermes integration path.
+External benchmarks from the report should stay future-facing until v1 has
+local smoke proof plus a stable, tested Hermes integration path.

@@ -4,19 +4,24 @@ This roadmap preserves the local-first v1 boundary while keeping the report's
 larger Meta Memory OS direction visible. The product shape is one Hermes
 provider with many internal planes, not several competing providers.
 
-## Phase 0: Adapter Contract
+## Phase 0: Adapter Contract Alignment
 
-Before adding runtime features, prove the target Hermes plugin contract:
+Before adding runtime features, align the Hermes adapter boundary to the current
+local plugin contract and prove it locally:
 
-- metadata filename and required fields;
-- `register(ctx)` or class discovery shape;
-- `initialize` behavior;
-- prefetch and turn-sync lifecycle hook signatures;
-- provider tool schema and handler registration;
-- session-end extraction and built-in memory write mirroring behavior.
+- `plugin.yaml` metadata and required fields;
+- Python `register(ctx)` entrypoint and discovery shape;
+- `initialize(...)` bridge setup;
+- lifecycle hook names and current `on_session_end` registration;
+- tool schemas and handler registration for `context_pack`, `remember`,
+  `search`, and `verify`;
+- local smoke proof for adapter compilation, manifest shape, `initialize(...)`,
+  `register(ctx)`, tool schemas, CLI delegation, configured SQLite path
+  handling, and tool-call argument boundaries.
 
-Until this is verified against a target Hermes version, adapter work remains a
-local scaffold and smoke-test target.
+Until this is loaded and exercised by a real target Hermes version, adapter work
+remains a local contract alignment and smoke-test target, not a production
+Hermes installation claim.
 
 ## Phase 1: Local-First V1 Scaffold
 
@@ -32,7 +37,8 @@ V1 is the minimum auditable Hermes meta-provider:
 - CLI bridge for JSON stdin/stdout.
 - TypeScript/Vitest tests for core, SQLite, and CLI behavior.
 - pnpm and Turborepo orchestration.
-- Thin Hermes Python adapter that maps Hermes calls to the TypeScript CLI only.
+- Thin Hermes Python adapter that maps Hermes hooks and tools to the TypeScript
+  CLI only.
 
 V1 does not include vector search, graph databases, cloud providers, LLM
 extraction, reflection, connector sync, social memory, or a second Hermes

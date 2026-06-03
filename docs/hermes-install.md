@@ -3,12 +3,12 @@
 ## Contract Check
 
 Before installing this adapter into a real Hermes checkout, verify the target
-Hermes version and memory plugin contract. Current Hermes documentation describes
-`plugin.yaml`, `register(ctx)`, and lifecycle hooks, while this repo currently
-has a `plugin.json` scaffold and a `MetaMemoryProvider` class.
+Hermes version and plugin contract. Current Hermes documentation describes
+`plugin.yaml` metadata, a Python `register(ctx)` entrypoint, lifecycle hooks, and
+tool schemas registered with handlers.
 
-Treat the steps below as local scaffold setup until that compatibility check is
-complete.
+Treat the steps below as local contract alignment and smoke proof. They do not
+claim a live production Hermes installation.
 
 Python is only the Hermes boundary. It maps Hermes calls to the TypeScript CLI
 and must not own memory schema, ranking, persistence, retrieval, verification
@@ -42,19 +42,20 @@ pnpm --filter @agent-memory-os/cli link --global
 export META_MEMORY_CLI=meta-memory
 ```
 
-## Install the Plugin Scaffold
+## Install the Plugin
 
-For local scaffold setup, copy or symlink:
+For local smoke testing, use the adapter directory in this repo:
 
 ```text
 adapters/hermes/plugins/memory/meta_memory
 ```
 
-into the Hermes memory plugin directory, then select `meta_memory` as the active memory provider.
+For a real Hermes checkout, follow that release's plugin installation path and
+enablement rules. Confirm that Hermes discovers `plugin.yaml`, imports the Python
+module, calls `register(ctx)`, runs any required `initialize(...)` bridge setup,
+and registers the expected lifecycle hooks and tool schemas.
 
-If the target Hermes release expects `plugin.yaml` or a `register(ctx)` function,
-update the adapter metadata and registration shape before relying on these
-install notes.
+Do not treat local smoke output as proof of a live Hermes install.
 
 ## Smoke Check Before Hermes
 
@@ -77,9 +78,13 @@ echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"bud
 
 The context-pack output should include `contextPack` and the seeded Biome memory.
 
+This proves the adapter can compile, call the TypeScript CLI, and use the
+configured SQLite path locally. It does not prove Hermes plugin discovery or
+runtime hook execution.
+
 ## Notes
 
-- Hermes can use one external provider at a time, so this plugin acts as the meta-provider.
+- This repo is designed to act as the single Hermes-facing meta-memory boundary.
 - The adapter returns JSON context packs with citations.
 - `META_MEMORY_DB` controls the local SQLite database path.
 - The adapter creates the parent directory for file-backed `META_MEMORY_DB` paths.

@@ -50,7 +50,9 @@ Do not commit `.env` or local SQLite files.
 
 Before starting feature work:
 
-1. Confirm Hermes target version and memory plugin discovery behavior.
+1. Confirm Hermes target version, `plugin.yaml` fields, `register(ctx)`
+   discovery, any `initialize(...)` behavior, lifecycle hooks, and tool schema
+   registration.
 2. Run `pnpm run ci` from a clean branch.
 3. Build the CLI before adapter smoke testing.
 4. Keep Browser verification out of scope unless a web target is added.
