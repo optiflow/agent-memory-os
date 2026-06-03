@@ -1,13 +1,13 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "tasks": {
-    "bench": {
+    "@agent-memory-os/evals#bench": {
       "cache": false,
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"],
       "outputs": ["reports/**"]
     },
-    "bench:ci": {
+    "@agent-memory-os/evals#bench:ci": {
       "cache": false,
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"],
@@ -25,11 +25,11 @@
       "cache": false,
       "persistent": true
     },
-    "eval": {
+    "@agent-memory-os/evals#eval": {
       "cache": false,
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"],
-      "outputs": ["reports/**"]
+      "outputs": []
     },
     "lint": {
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/biome.json"],

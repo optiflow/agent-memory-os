@@ -3,7 +3,5 @@ packages:
 
 confirmModulesPurge: false
 
-onlyBuiltDependencies:
-  - lefthook
 allowBuilds:
   lefthook: true

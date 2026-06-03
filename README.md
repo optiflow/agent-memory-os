@@ -57,8 +57,7 @@ context-pack, verification, CLI, and adapter boundary are stable.
 
 Prerequisites:
 
-- Node.js 22.13.0 or newer. Current active work should prefer Node 24.x because the
-  repo uses Node's built-in `node:sqlite` module.
+- Node.js 24.x. The repo uses Node's built-in `node:sqlite` module.
 - pnpm through Corepack.
 - Python 3 for the thin Hermes adapter checks.
 

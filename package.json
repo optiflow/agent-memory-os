@@ -6,12 +6,12 @@
   "packageManager": "pnpm@11.5.1",
   "scripts": {
     "adapter:check": "python3 -m py_compile adapters/hermes/plugins/memory/meta_memory/__init__.py adapters/hermes/plugins/memory/meta_memory/test/test_provider.py && python3 -m unittest discover adapters/hermes/plugins/memory/meta_memory/test",
-    "bench": "turbo run bench",
-    "bench:ci": "turbo run bench:ci",
+    "bench": "turbo run bench --filter @agent-memory-os/evals",
+    "bench:ci": "turbo run bench:ci --filter @agent-memory-os/evals",
     "build": "turbo run build",
     "ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm adapter:check && pnpm eval && pnpm bench:ci",
     "clean": "turbo run clean",
-    "eval": "turbo run eval",
+    "eval": "turbo run eval --filter @agent-memory-os/evals",
     "format": "biome format --write .",
     "hooks:install": "lefthook install",
     "lint": "pnpm lint:packages && pnpm lint:repo",
@@ -23,14 +23,14 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
-    "@types/node": "25.9.1",
+    "@types/node": "24.12.4",
     "lefthook": "2.1.9",
     "turbo": "2.9.16",
     "typescript": "6.0.3",
     "vitest": "4.1.8"
   },
   "engines": {
-    "node": ">=22.13.0",
+    "node": ">=24 <25",
     "pnpm": ">=11.5.1"
   }
 }

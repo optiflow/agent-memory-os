@@ -13,10 +13,8 @@ The current local checkout was verified with:
 | pnpm | `11.5.1` |
 | Python | `3.14.5` |
 
-The root `package.json` keeps conservative minimums so development can start on
-supported Node 22.13.0+ environments. Node's built-in `node:sqlite` module is
-still a runtime constraint for this repo; prefer current Node 24.x for active
-work.
+The root `package.json` declares Node 24.x as the supported runtime baseline.
+Node's built-in `node:sqlite` module is a runtime constraint for this repo.
 
 ## Setup
 
