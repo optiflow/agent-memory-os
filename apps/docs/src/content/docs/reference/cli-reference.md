@@ -4,6 +4,7 @@ description: JSON stdin/stdout commands for the meta-memory bridge.
 ---
 
 `meta-memory` is a JSON stdin/stdout bridge for Hermes and local smoke tests.
+It reads one JSON object from stdin and writes one JSON object to stdout.
 
 Build it before invoking the generated CLI directly:
 
@@ -11,7 +12,7 @@ Build it before invoking the generated CLI directly:
 pnpm --filter @agent-memory-os/cli build
 ```
 
-Then call:
+Then call a command:
 
 ```bash
 echo '{"dbPath":":memory:","query":"Biome","budgetTokens":400}' \
@@ -23,7 +24,7 @@ echo '{"dbPath":":memory:","query":"Biome","budgetTokens":400}' \
 | Field | Default | Notes |
 | --- | --- | --- |
 | `dbPath` | `META_MEMORY_DB`, then `:memory:` | SQLite path. |
-| `scope` | `{ "type": "workspace", "id": "default" }` | Optional scope object. |
+| `scope` | `{ "type": "workspace", "id": "default" }` | Optional memory scope. |
 | `metadata` | omitted | Optional JSON object where supported. |
 
 If neither `dbPath` nor `META_MEMORY_DB` is set, direct CLI calls use
@@ -31,18 +32,20 @@ If neither `dbPath` nor `META_MEMORY_DB` is set, direct CLI calls use
 adapter's file-backed default database.
 
 `scope` partitions local memory. The default workspace scope is suitable for
-smoke tests, but real workspace, project, and session callers should pass a
-stable `type` plus `id` so unrelated memories do not collide.
+smoke tests, but real callers should pass a stable `type` plus `id` so unrelated
+memories do not collide.
 
 ## `remember`
 
+Purpose:
+
 Append an evidence event.
 
-Required:
+Required fields:
 
 - `content`: non-empty string.
 
-Optional:
+Optional fields:
 
 - `kind`: evidence kind, defaults to `explicit_memory`.
 - `actor`: `assistant`, `system`, `tool`, or `user`; defaults to `user`.
@@ -51,77 +54,109 @@ Optional:
 
 Returns:
 
-- `{ "event": EvidenceEvent }`
+```text
+{ "event": EvidenceEvent }
+```
+
+Notes:
+
+- This command records evidence only. It does not create semantic facts
+  automatically.
 
 ## `search`
 
-Search local evidence, facts, active session state, and workspace resources with
-SQLite FTS. Core memory blocks are included through `context-pack`, not raw
-`search`.
+Purpose:
 
-Required:
+Search local evidence, facts, active session state, and workspace resources with
+SQLite FTS.
+
+Required fields:
 
 - `query`: non-empty string.
 
-Optional:
+Optional fields:
 
 - `limit`: positive integer, defaults to `10`.
 - `scope`: narrows FTS search to a memory scope.
 
 Returns:
 
-- `{ "results": SearchResult[] }`
+```text
+{ "results": SearchResult[] }
+```
+
+Notes:
+
+- Core memory blocks are included through `context-pack`, not raw `search`.
 
 ## `context-pack`
 
+Purpose:
+
 Build a bounded context pack for injection or inspection.
 
-Required:
+Required fields:
 
 - `query`: non-empty string.
 
-Optional:
+Optional fields:
 
 - `budgetTokens`: positive integer, defaults to `1200`.
-- `policy`: `auto`, `task`, or `workspace`; defaults to `auto`. `auto`
-  includes active session state and workspace resources, `task` excludes
-  workspace resource search, and `workspace` excludes active session state.
+- `policy`: `auto`, `task`, or `workspace`; defaults to `auto`.
 - `scope`
 
 Returns:
 
-- `{ "contextPack": ContextPack }`
+```text
+{ "contextPack": ContextPack }
+```
+
+Notes:
+
+- `auto` includes active session state and workspace resources.
+- `task` excludes workspace resource search.
+- `workspace` excludes active session state.
 
 ## `verify`
 
+Purpose:
+
 Record verification status for a memory item.
 
-Required:
+Required fields:
 
 - `targetId`: non-empty string.
 - `message`: non-empty string.
 
-Optional:
+Optional fields:
 
 - `status`: `failed`, `passed`, `stale`, `unknown`, or `warning`; defaults to
   `unknown`.
 
 Returns:
 
-- `{ "verification": VerificationRecord }`
+```text
+{ "verification": VerificationRecord }
+```
+
+Notes:
+
+- Latest non-passed records are included as warnings in context packs for packed
+  item IDs.
 
 ## `upsert-session-state`
 
-Create or update compact active task state. This is a projection write: the CLI
-appends an audit evidence event before updating the projection table.
+Purpose:
 
-Required:
+Create or update compact active task state.
+
+Required fields:
 
 - `id`: non-empty session-state identifier.
 - `currentGoal`: non-empty current goal.
 - `summary`: non-empty bounded task summary.
 
-Optional:
+Optional fields:
 
 - `status`: `active`, `blocked`, or `complete`; defaults to `active`.
 - `workingSet`: array of strings.
@@ -131,20 +166,31 @@ Optional:
 
 Returns:
 
-- `{ "event": EvidenceEvent, "sessionState": SessionState }`
+```text
+{
+  "event": EvidenceEvent,
+  "sessionState": SessionState
+}
+```
+
+Notes:
+
+- This is a projection write. The CLI appends an audit evidence event before
+  updating the projection table.
 
 ## `upsert-resource`
 
-Create or update a browseable workspace resource. This is a projection write:
-the CLI appends an audit evidence event before updating the projection table.
+Purpose:
 
-Required:
+Create or update a browseable workspace resource.
+
+Required fields:
 
 - `uri`: non-empty resource URI.
 - `title`: non-empty display title.
 - `content`: non-empty searchable content.
 
-Optional:
+Optional fields:
 
 - `kind`: `doc`, `file`, `note`, `other`, or `url`; defaults to `file`.
 - `parentUri`: non-empty parent resource URI.
@@ -154,13 +200,29 @@ Optional:
 
 Returns:
 
-- `{ "event": EvidenceEvent, "resource": WorkspaceResource }`
+```text
+{
+  "event": EvidenceEvent,
+  "resource": WorkspaceResource
+}
+```
+
+Notes:
+
+- This is a projection write. The CLI appends an audit evidence event before
+  updating the projection table.
 
 ## `browse-resources`
 
+Purpose:
+
 List workspace resources under an optional parent URI.
 
-Optional:
+Required fields:
+
+- None.
+
+Optional fields:
 
 - `parentUri`: parent resource URI; omitted lists root resources.
 - `limit`: positive integer, defaults to `50`.
@@ -168,24 +230,46 @@ Optional:
 
 Returns:
 
-- `{ "resources": WorkspaceResource[] }`
+```text
+{ "resources": WorkspaceResource[] }
+```
 
 ## `seed-sample`
+
+Purpose:
 
 Create sample core, evidence, fact, session-state, and workspace-resource
 records for smoke testing.
 
-Optional:
+Required fields:
+
+- None.
+
+Optional fields:
 
 - `dbPath`
 - `scope`
 
 Returns:
 
-- `{ "coreBlock": CoreMemoryBlock, "event": EvidenceEvent, "fact": SemanticFact, "sessionState": SessionState, "resource": WorkspaceResource }`
+```text
+{
+  "coreBlock": CoreMemoryBlock,
+  "event": EvidenceEvent,
+  "fact": SemanticFact,
+  "sessionState": SessionState,
+  "resource": WorkspaceResource
+}
+```
+
+Notes:
+
+- Use this command for local smoke tests, not as a production seeding contract.
 
 ## Error Contract
 
 The CLI exits non-zero and writes an error object to stderr when input is
-invalid or the command is unknown. The Hermes adapter treats non-zero exits,
-empty stdout, and invalid JSON as adapter failures.
+invalid or the command is unknown.
+
+The Hermes adapter treats non-zero exits, empty stdout, and invalid JSON as
+adapter failures.

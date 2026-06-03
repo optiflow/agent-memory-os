@@ -2,79 +2,78 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/optiflow/agent-memory-os)
 
-Agent Memory OS is a local-first memory framework for Hermes coding agents. It
-keeps one Hermes-facing provider at the boundary while using several auditable
-internal memory views behind it: evidence, durable facts, search results,
-active task state, workspace resources, context packs, and verification records.
+Agent Memory OS is a local-first, evidence-led memory framework for Hermes
+coding agents. It gives Hermes one external memory boundary while keeping the
+actual memory system auditable: evidence, facts, active session state,
+workspace resources, context packs, and verification records stay as separate
+internal views.
 
-The core idea is simple:
+Core principle:
 
 > event-sourced writes, multi-view storage, routed reads, verified injection
 
-## What It Is
+## Confidence Snapshot
 
-This repo is a TypeScript-first V1/V1.1 implementation for building a safer
-coding-agent memory layer. It treats append-only evidence as the source of truth,
-then derives searchable facts, compact session state, workspace resources, and
-bounded context packs from that evidence.
+| Area | Current state |
+| --- | --- |
+| Local memory store | SQLite + FTS with evidence, facts, projections, and verification. |
+| Context injection | Bounded context packs with citations, budgets, policies, and warnings. |
+| CLI bridge | JSON stdin/stdout commands for smoke tests and adapter delegation. |
+| Evaluation | Lint, types, tests, evals, benchmarks, docs guard, and adapter checks. |
+| Hermes adapter | Local adapter/CLI smoke proof only, not production Hermes validation. |
 
-The Python code exists only where Hermes needs a Python memory provider. Storage,
-ranking, routing, schemas, context packing, verification policy, tests, and the
-CLI live in TypeScript packages.
+## What It Does
 
-## Status
+Agent Memory OS is built for safer coding-agent memory, not generic RAG. It:
 
-The local implementation is testable. It includes a real SQLite/FTS store,
-TypeScript domain model, JSON stdin/stdout CLI, deterministic evals, and a thin
-Hermes adapter.
-
-The Hermes boundary is aligned to the current local plugin contract described by
-Hermes docs: `plugin.yaml` metadata, `register(ctx)` registration,
-`initialize(...)` bridge setup, lifecycle hook wiring, and JSON-style tool
-schemas with JSON-string tool results. The repository root includes a thin
-Hermes plugin shim for Git-based installs, while the nested adapter remains the
-implementation boundary. This repo has local smoke proof for the adapter
-boundary and CLI bridge only. It does not claim a live production Hermes
-installation has been tested.
+- records raw evidence before deriving summaries or facts;
+- keeps stable rules, facts, task state, workspace resources, and retrieved
+  context as distinct memory views;
+- searches local SQLite/FTS data instead of depending on a vector database,
+  graph database, cloud provider, or LLM extraction step;
+- builds cited context packs with explicit token budgets and verification
+  warnings;
+- keeps Python limited to the thin Hermes plugin boundary while TypeScript owns
+  memory behavior.
 
 ## What Works Today
 
-- Pinned core memory blocks for high-authority rules and durable facts.
-- Append-only evidence events for messages, tool calls, outcomes, file edits,
-  and explicit memory writes.
-- Typed semantic facts with source event citations.
-- SQLite + FTS retrieval for local-first search.
-- Active session-state projection for compact current-task memory.
-- Browseable workspace resources with URI and parent links.
-- Deterministic context packs with token budgets and citations.
-- Verification records for `failed`, `passed`, `stale`, `unknown`, and
-  `warning` statuses, including latest warnings in context packs.
-- A `meta-memory` CLI bridge with `seed-sample`, `remember`, `search`,
-  `context-pack`, `upsert-session-state`, `upsert-resource`,
-  `browse-resources`, and `verify` commands.
-- A Hermes `status` tool that reports install/configuration readiness before
-  the TypeScript CLI is available.
-- Adapter-boundary Python checks and local smoke proof for the Hermes contract.
+V1 and V1.1 are implemented as a local-first foundation:
 
-## What Is Out Of V1/V1.1
+| Surface | Implemented behavior |
+| --- | --- |
+| Evidence | Append-only events for messages, tool calls, outcomes, edits, and writes. |
+| Facts | Typed semantic facts with source event IDs. |
+| Retrieval | SQLite + FTS over evidence, facts, active session state, and workspace resources. |
+| Context packs | Bounded, cited memory packs with `auto`, `task`, and `workspace` router policies. |
+| Verification | Status records with latest warnings included in context packs. |
+| Workspace memory | Browseable resources keyed by scope and URI. |
+| CLI | Eight JSON commands for seeding, writing, search, packing, projections, browsing, and verification. |
+| Hermes boundary | A root plugin shim and nested Python adapter that delegate memory work to the TypeScript CLI. |
 
-V1/V1.1 intentionally does not include a vector database, graph database, cloud
-memory provider, LLM extraction dependency, reflection engine, connector sync,
-social memory, or a second Hermes provider.
+## What It Does Not Claim
 
-Those ideas stay behind the v2+ roadmap until the local evidence, retrieval,
-context-pack, verification, session/resource projections, CLI, and adapter
-boundary are stable.
+V1/V1.1 intentionally does not include:
 
-## Quickstart
+- a production-tested Hermes installation for a specific Hermes release;
+- a vector database, graph database, or cloud memory provider;
+- LLM-based fact extraction or reflection;
+- connector sync, social memory, or shared/federated memory;
+- branch/workspace drift checks or citation validation against live code state;
+- a second Hermes memory provider.
+
+Those ideas stay behind the V2+ roadmap until the local evidence, retrieval,
+context-pack, verification, CLI, projection, and adapter foundations are stable.
+
+## Try It Locally
 
 Prerequisites:
 
-- Node.js 24.x. The repo uses Node's built-in `node:sqlite` module.
+- Node.js 24.x.
 - pnpm through Corepack.
-- Python 3 for the thin Hermes adapter checks.
+- Python 3 for adapter-boundary checks.
 
-Install dependencies and run the full local gate:
+Run the local gate:
 
 ```bash
 corepack enable pnpm
@@ -82,94 +81,40 @@ pnpm install
 pnpm run ci
 ```
 
-Run a local CLI smoke test:
+For a CLI smoke test and expected output, use
+[Getting Started](apps/docs/src/content/docs/start/getting-started.md). For
+request and response contracts, use the
+[CLI reference](apps/docs/src/content/docs/reference/cli-reference.md).
 
-```bash
-pnpm --filter @agent-memory-os/cli build
-tmp_dir="$(mktemp -d)"
-echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\"}" \
-  | node packages/cli/dist/index.js seed-sample
-echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"budgetTokens\":400}" \
-  | node packages/cli/dist/index.js context-pack
-```
+## Documentation Map
 
-Expected result:
-
-- `seed-sample` returns sample core, evidence, fact, session-state, and
-  workspace-resource records.
-- `context-pack` returns a bounded `contextPack`.
-- The returned context pack includes the seeded Biome memory with citations.
-
-## Repository Layout
-
-```text
-packages/core      Domain types, context router, packer, verification policy
-packages/sqlite    SQLite schema, migrations, FTS search, local store
-packages/cli       JSON CLI bridge for Hermes and future adapters
-packages/evals     Deterministic eval and benchmark fixtures
-adapters/hermes    Thin Python Hermes plugin contract bridge
-apps/docs          Astro Starlight documentation site
-plugin.yaml        Root Hermes plugin shim for Git-based installs
-skills             Bundled Hermes setup runbook
-```
-
-## CLI Surface
-
-The CLI reads JSON from stdin and writes JSON to stdout:
-
-```bash
-echo '{"dbPath":":memory:","query":"formatter preference","budgetTokens":400}' \
-  | node packages/cli/dist/index.js context-pack
-```
-
-Current commands:
-
-- `seed-sample`: create sample core, evidence, fact, session-state, and
-  workspace-resource records.
-- `remember`: append an evidence event.
-- `search`: search evidence, facts, session state, and resources with SQLite FTS.
-- `context-pack`: build a bounded context pack for injection or inspection.
-- `upsert-session-state`: update compact current-task memory.
-- `upsert-resource`: add or update a workspace resource.
-- `browse-resources`: list workspace resources under an optional parent URI.
-- `verify`: record verification status for a memory item.
-
-See the
-[CLI reference](apps/docs/src/content/docs/reference/cli-reference.md) for
-request and response contracts.
-
-## Read Next
-
-- Read the published docs:
+- Published docs:
   [https://optiflow.github.io/agent-memory-os/](https://optiflow.github.io/agent-memory-os/).
-- Understand the design:
-  [architecture](apps/docs/src/content/docs/architecture/architecture.md) and
-  [data model](apps/docs/src/content/docs/architecture/data-model.md).
-- Set up the environment:
-  [environment](apps/docs/src/content/docs/start/environment.md).
-- Use the CLI:
-  [CLI reference](apps/docs/src/content/docs/reference/cli-reference.md).
-- Inspect the Hermes boundary:
-  [adapters/hermes/README.md](adapters/hermes/README.md) and
-  [Hermes install notes](apps/docs/src/content/docs/integrations/hermes-install.md).
-- Review quality gates and evals:
-  [evaluation](apps/docs/src/content/docs/reference/evaluation.md).
-- Check roadmap boundaries:
-  [roadmap](apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md).
-- Read the research basis:
-  [Meta Memory OS research brief](apps/docs/src/content/docs/research/meta-memory-os-brief.md)
+- Maintainer/developer setup:
+  [Getting Started](apps/docs/src/content/docs/start/getting-started.md) and
+  [Environment](apps/docs/src/content/docs/start/environment.md).
+- System design:
+  [Architecture](apps/docs/src/content/docs/architecture/architecture.md) and
+  [Data Model](apps/docs/src/content/docs/architecture/data-model.md).
+- CLI and quality gates:
+  [CLI Reference](apps/docs/src/content/docs/reference/cli-reference.md) and
+  [Evaluation](apps/docs/src/content/docs/reference/evaluation.md).
+- Hermes adapter:
+  [Hermes Install Notes](apps/docs/src/content/docs/integrations/hermes-install.md)
+  and [adapters/hermes/README.md](adapters/hermes/README.md).
+- Roadmap and research:
+  [Roadmap](apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md),
+  [Meta Memory OS Research Brief](apps/docs/src/content/docs/research/meta-memory-os-brief.md),
   and
-  [provider comparison](apps/docs/src/content/docs/research/provider-comparison.md).
+  [Provider Comparison](apps/docs/src/content/docs/research/provider-comparison.md).
+- AI-agent operating instructions:
+  [AGENTS.md](AGENTS.md).
 
-Coding-agent operating instructions live in [AGENTS.md](AGENTS.md).
+## Roadmap
 
-## Roadmap Direction
-
-Phase 0 aligns the Hermes adapter contract to `plugin.yaml`, `register(ctx)`,
-`initialize(...)` bridge setup, lifecycle hooks, tool schemas, and local smoke
-proof. Phase 1 keeps the local evidence ledger, facts, FTS retrieval, context
-packs, verification records, CLI, and adapter auditable. Phase 1.1 adds active
-session state, workspace resources, and local router policies without graph,
-vector, cloud, or LLM dependencies. Phase 2+ is where temporal recall,
-contradiction handling, reflection, handoff packets, connector sync, and shared
-memory belong after the local system is proven.
+| Phase | Status | Boundary |
+| --- | --- | --- |
+| Phase 0 | Local adapter alignment | Plugin shim, registration, tool schemas, hook fixture, and smoke proof. |
+| Phase 1 | Implemented V1 foundation | Evidence, facts, FTS retrieval, context packs, verification, CLI, tests, and adapter. |
+| Phase 1.1 | Implemented hardening | Session state, workspace resources, router policies, and verification warnings. |
+| Phase 2+ | Deferred design | Temporal recall, contradiction handling, reflection, handoff, sync, and federation. |

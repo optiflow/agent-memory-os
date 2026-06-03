@@ -3,8 +3,9 @@ title: Data Model
 description: Evidence events, facts, projections, verification records, and context packs.
 ---
 
-The V1 model separates raw evidence, durable facts, injected context, and
-verification. Do not collapse these into one memory table.
+The V1/V1.1 model separates raw evidence, durable facts, projections,
+verification records, and injected context. Do not collapse these into one
+memory table.
 
 TypeScript domain types and SQLite migrations are the source of truth for schema
 and persistence. Python must not define memory schema, ranking, validation, or
@@ -12,7 +13,7 @@ memory behavior.
 
 ## Scope
 
-Every stored object that can be workspace-bound uses a `MemoryScope`:
+Stored objects that can be workspace-bound use `MemoryScope`.
 
 | Field | Values |
 | --- | --- |
@@ -20,6 +21,18 @@ Every stored object that can be workspace-bound uses a `MemoryScope`:
 | `id` | Non-empty scope identifier |
 
 The CLI defaults to `{ "type": "workspace", "id": "default" }`.
+
+## Source And Projection Model
+
+| Layer | Status | Contract |
+| --- | --- | --- |
+| Evidence events | V1 implemented | Append-only source of truth. |
+| Core memory blocks | V1 implemented | Always-visible high-authority rules and facts. |
+| Semantic facts | V1 implemented | Typed, cited claims derived through explicit code paths or fixtures. |
+| Verification records | V1.1 implemented | Latest non-passed records are included as context-pack warnings. |
+| Session state | V1.1 implemented | Compact current-task projection, backed by audit evidence. |
+| Workspace resources | V1.1 implemented | URI-addressed resource tree, backed by audit evidence. |
+| Context packs | V1/V1.1 implemented | Generated, bounded injection views with citations and warnings. |
 
 ## Evidence Events
 
@@ -38,9 +51,6 @@ Supported kinds:
 
 Evidence is the source of truth. Future projections can be rebuilt from it; they
 must not replace it.
-
-The write policy is conservative: never mutate evidence, rarely delete facts,
-usually supersede beliefs, and often expire temporary state.
 
 ## Core Memory Blocks
 
@@ -61,7 +71,7 @@ types and SQLite migrations remain the source of truth for persisted memory.
 
 ## Semantic Facts
 
-`SemanticFact` stores typed, reusable claims:
+`SemanticFact` stores typed, reusable claims.
 
 | Field | Meaning |
 | --- | --- |
@@ -77,7 +87,9 @@ fixtures only.
 
 ## Verification Records
 
-`VerificationRecord` tracks checks against memory items. Supported statuses are:
+`VerificationRecord` tracks checks against memory items.
+
+Supported statuses:
 
 - `failed`
 - `passed`
@@ -91,10 +103,12 @@ against live workspace state or check branches.
 
 ## Session State
 
-`SessionState` is the compact current-task projection. It stores:
+`SessionState` is the compact current-task projection.
+
+Important fields:
 
 - `status`: `active`, `blocked`, or `complete`.
-- `currentGoal`: the immediate task.
+- `currentGoal`: immediate task.
 - `summary`: bounded task state.
 - `workingSet`: relevant files, modules, or resources.
 - `sourceEventIds`: evidence that supports the projection.
@@ -105,17 +119,19 @@ Only `active` session states are automatically considered by the context router.
 ## Workspace Resources
 
 `WorkspaceResource` is the browseable workspace/resource projection. It stores
-URI-addressed resources with a title, kind, content, optional `parentUri`,
-scope, source event IDs, and metadata.
+URI-addressed resources with title, kind, content, optional `parentUri`, scope,
+source event IDs, and metadata.
 
 Resources are keyed by scope plus URI so similarly named project and workspace
 resources do not collide. The resource tree is local SQLite + FTS only; it does
-not introduce connector sync, a vector database, graph database, or cloud
+not introduce connector sync, vector storage, graph storage, or a cloud
 provider.
 
 ## Context Packs
 
-`ContextPack` is the injected retrieval output:
+`ContextPack` is the injected retrieval output.
+
+Important fields:
 
 - `query`: user or adapter query.
 - `budgetTokens`: requested budget.
@@ -125,16 +141,15 @@ provider.
 - `verificationWarnings`: latest failed, stale, unknown, or warning records for
   items included in the pack.
 
-Context packs should be bounded, cited, and inspectable.
+Router policies:
 
-The router supports three local policies:
+| Policy | Includes | Excludes |
+| --- | --- | --- |
+| `auto` | Core memory, active session state, search results, workspace resources | Deferred V2 graph/reflection work |
+| `task` | Core memory and active session state | Workspace resource search |
+| `workspace` | Core memory and resource search results | Active session state |
 
-- `auto`: include core memory, active session state, search results, and
-  workspace resources.
-- `task`: include core memory and active session state while excluding resource
-  search results.
-- `workspace`: include core memory and resource search results while excluding
-  active session state.
+Context packs should remain bounded, cited, and inspectable.
 
 ## SQLite Tables
 

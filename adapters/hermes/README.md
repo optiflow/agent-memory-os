@@ -1,23 +1,31 @@
 # Hermes Adapter
 
-This directory contains a thin Python adapter for Hermes Agent. Hermes plugins
-are Python modules, so this adapter delegates all storage and routing work to
-the TypeScript `meta-memory` CLI.
+This directory contains the thin Python adapter for Hermes Agent. Hermes plugins
+are Python modules, so this adapter delegates storage, routing, context packing,
+verification, and memory behavior to the TypeScript `meta-memory` CLI.
 
 The repository root also contains a Hermes plugin shim for Git-based installs.
 That shim exists only for discovery; this directory remains the implementation
 boundary.
 
-Python must only map Hermes lifecycle and tool calls to the TypeScript CLI. It
-must not own memory schema, ranking, persistence, retrieval, verification
-policy, or product behavior.
+## Maintainer Boundary
+
+| Concern | Owner |
+| --- | --- |
+| Hermes discovery, lifecycle mapping, and tool registration | Python adapter |
+| Memory schema, ranking, persistence, retrieval, and verification policy | TypeScript packages |
+| JSON stdin/stdout bridge | `packages/cli` |
+| Install-facing guidance | Starlight Hermes install notes |
+
+Python must not own memory schema, ranking, persistence, retrieval,
+verification policy, or product behavior.
 
 ## Contract Shape
 
 Current Hermes documentation describes local plugins with:
 
-- `plugin.yaml` metadata, including the plugin name, version, description,
-  provided tools, and provided hooks;
+- `plugin.yaml` metadata, including plugin name, version, description, provided
+  tools, and provided hooks;
 - a Python `register(ctx)` entrypoint that calls `ctx.register_tool(...)` and
   `ctx.register_hook(...)`;
 - lifecycle hook names such as `pre_tool_call`, `post_tool_call`,
@@ -26,10 +34,11 @@ Current Hermes documentation describes local plugins with:
   return JSON strings.
 
 This adapter exposes `initialize(...)` as bridge setup only: read environment,
-prepare CLI and SQLite path configuration, and avoid owning memory schema,
-ranking, persistence, or retrieval there. The current registration wires the v1
-tools and the `on_session_end` hook; additional lifecycle hooks should be added
-only when their Hermes signatures and local behavior are proven.
+prepare CLI and SQLite path configuration, and avoid owning memory behavior.
+The current registration wires the V1/V1.1 tools and the `on_session_end` hook.
+
+Additional lifecycle hooks should be added only when their Hermes signatures and
+local behavior are proven.
 
 The repo-level proof today is local contract alignment and smoke testing. Do not
 describe it as a live production Hermes installation unless a real target Hermes
@@ -53,23 +62,26 @@ You can also link the CLI globally and leave `META_MEMORY_CLI` unset:
 pnpm --filter @agent-memory-os/cli link --global
 ```
 
-For maintainer review or vendoring, use the adapter directory in this repo. For
-ordinary Git-based Hermes installs, point Hermes at the repository root so it
-can discover the root `plugin.yaml` and shim. For a real Hermes checkout, still
-verify that `plugin.yaml`, `register(ctx)`, `initialize(...)` behavior, hooks,
-setup-skill registration when available, and tool schemas are discovered.
+For ordinary Git-based Hermes installs, point Hermes at the repository root so
+it can discover the root `plugin.yaml` and shim. For a real Hermes checkout,
+still verify that `plugin.yaml`, `register(ctx)`, `initialize(...)` behavior,
+hooks, setup-skill registration when available, and tool schemas are discovered.
 
 ## Configuration
 
-- `META_MEMORY_CLI` is optional when `meta-memory` is on `PATH` or the built repo-local CLI exists at `packages/cli/dist/index.js`. It can be a bin name like `meta-memory` or a command with arguments like `node '/absolute/path/packages/cli/dist/index.js'`.
-- `META_MEMORY_DB` is optional. If unset, the adapter uses Hermes home when available, otherwise `~/.hermes/meta-memory.sqlite`. The adapter creates the parent directory when it is missing.
-- `META_MEMORY_TIMEOUT_SECONDS` defaults to `20` and must be a positive number.
+| Variable | Purpose |
+| --- | --- |
+| `META_MEMORY_CLI` | Optional command used when `meta-memory` is not on `PATH` and repo-local CLI auto-detection should not be used. |
+| `META_MEMORY_DB` | Optional SQLite path. Defaults to Hermes home or `~/.hermes/meta-memory.sqlite`. |
+| `META_MEMORY_TIMEOUT_SECONDS` | Adapter subprocess timeout. Defaults to `20` and must be positive. |
 
-The adapter always sends its configured `META_MEMORY_DB` to the CLI. Tool-call arguments cannot override the database path.
+The adapter always sends its configured `META_MEMORY_DB` to the CLI. Tool-call
+arguments cannot override the database path. The adapter creates the parent
+directory when a file-backed database path is missing.
 
-## Adapter Boundary
+## Adapter Tools
 
-The adapter currently exposes the v1/v1.1 tools:
+The adapter currently exposes the V1/V1.1 tools:
 
 - `status`
 - `context_pack`
@@ -80,19 +92,16 @@ The adapter currently exposes the v1/v1.1 tools:
 - `browse_resources`
 - `verify`
 
-`handoff` and `reflect` are intentionally deferred to v2.
+`handoff` and `reflect` are intentionally deferred to V2.
 
 Hermes tool schemas are intentionally narrower than the CLI contracts. For
 example, the `remember` tool exposes only `content`; the adapter supplies the
-configured database path and TypeScript defaults handle the rest. Each registered
-tool schema must point to a Python handler that delegates to the matching CLI
-command.
+configured database path and TypeScript defaults handle the rest.
+
+Each registered tool schema must point to a Python handler that delegates to the
+matching CLI command.
 
 ## Lifecycle Mapping
-
-The current adapter maps Hermes-facing behavior to CLI commands. In the
-`register(ctx)` integration, tool methods become registered handlers, while
-provider callbacks and hooks stay thin bridges to the same CLI behavior:
 
 | Adapter method | CLI command | Purpose |
 | --- | --- | --- |
@@ -124,13 +133,15 @@ For an end-to-end CLI check, build the CLI first and run:
 
 ```bash
 tmp_dir="$(mktemp -d)"
-echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\"}" | node packages/cli/dist/index.js seed-sample
+echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\"}" \
+  | node packages/cli/dist/index.js seed-sample
 echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"budgetTokens\":400}" \
   | node packages/cli/dist/index.js context-pack
 ```
 
 These checks prove the local adapter, root shim, manifests, `initialize(...)`,
 `register(ctx)`, setup-skill registration fixture, tool schemas, hook
-registration fixture, progressive status diagnostics, and CLI bridge. They do
-not prove live Hermes plugin discovery, enablement, lifecycle hook execution, or
-production installation for a specific Hermes release.
+registration fixture, progressive status diagnostics, and CLI bridge.
+
+They do not prove live Hermes plugin discovery, enablement, lifecycle hook
+execution, or production installation for a specific Hermes release.

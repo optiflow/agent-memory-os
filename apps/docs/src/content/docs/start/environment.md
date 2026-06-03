@@ -44,7 +44,7 @@ Optional adapter settings:
 
 | Variable | Purpose |
 | --- | --- |
-| `META_MEMORY_CLI` | Command the Python adapter uses to invoke the TypeScript CLI when `meta-memory` is not on `PATH` and the built repo-local CLI should not be auto-detected. |
+| `META_MEMORY_CLI` | Command used when `meta-memory` is not on `PATH` and repo-local CLI auto-detection should not be used. |
 | `META_MEMORY_DB` | Local SQLite file for the provider. If unset, the adapter uses Hermes home or `~/.hermes/meta-memory.sqlite`. |
 | `META_MEMORY_TIMEOUT_SECONDS` | Adapter subprocess timeout. Defaults to `20`. |
 

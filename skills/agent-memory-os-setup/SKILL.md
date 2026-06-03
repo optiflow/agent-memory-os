@@ -27,9 +27,13 @@ the Agent Memory OS memory provider.
    - Call `meta_memory.status` again.
    - Use `meta_memory.context_pack` with a small test query only after status is
      ready.
+   - Treat local smoke proof as adapter/CLI proof only, not live Hermes runtime
+     validation.
 
 ## Boundaries
 
 - `SKILL.md` is setup guidance, not the install contract.
 - Hermes discovers this plugin through `plugin.yaml` and `register(ctx)`.
 - Python is only the Hermes adapter boundary; TypeScript owns memory behavior.
+- Do not claim production Hermes compatibility until a target Hermes checkout
+  loads the plugin and exercises hooks and tools end to end.
