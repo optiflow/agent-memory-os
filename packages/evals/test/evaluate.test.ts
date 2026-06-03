@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { benchmarkCases } from "./fixtures.js";
-import { runBenchmarkCases, writeBenchmarkReport } from "./runner.js";
+import { benchmarkCases } from "../src/fixtures.js";
+import { runBenchmarkCases, writeBenchmarkReport } from "../src/runner.js";
 
 describe("local memory benchmark evaluation", () => {
   it("meets deterministic local memory benchmark expectations", async () => {

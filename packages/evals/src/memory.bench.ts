@@ -1,6 +1,6 @@
-import { afterAll, bench, describe } from "vitest";
 import { DefaultContextRouter } from "@agent-memory-os/core";
 import { SQLiteMemoryStore } from "@agent-memory-os/sqlite";
+import { afterAll, bench, describe } from "vitest";
 import { benchmarkCases } from "./fixtures.js";
 import { seedBenchmarkCase } from "./runner.js";
 import type { BenchmarkCase } from "./types.js";

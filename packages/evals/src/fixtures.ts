@@ -94,7 +94,8 @@ const environmentSeed: BenchmarkSeed = {
       id: "fact_ci_gate",
       subject: "repo",
       predicate: "verifies_with",
-      object: "pnpm run ci for lint, typecheck, tests, build, adapter checks, evals, and benchmarks",
+      object:
+        "pnpm run ci for lint, typecheck, tests, build, adapter checks, evals, and benchmarks",
       confidence: 0.9,
       sourceEventIds: ["event_ci_tool_result", "event_benchmark_file_edit"],
     },
@@ -117,7 +118,8 @@ const writeReadSeed: BenchmarkSeed = {
       id: "event_context7_docs",
       kind: "system_event",
       actor: "system",
-      content: "Context7 is the preferred current documentation source for Turborepo and Vitest changes.",
+      content:
+        "Context7 is the preferred current documentation source for Turborepo and Vitest changes.",
       timestamp,
       scope: workspaceScope,
     },

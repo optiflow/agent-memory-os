@@ -10,7 +10,7 @@
     "bench:ci": "mkdir -p reports && vitest bench --config ../../vitest.config.ts src/memory.bench.ts --outputJson reports/benchmarks.json",
     "build": "tsc -b",
     "clean": "tsc -b --clean",
-    "eval": "vitest run --config ../../vitest.config.ts src/evaluate.test.ts",
+    "eval": "vitest run --config ../../vitest.config.ts test/evaluate.test.ts",
     "lint": "biome check .",
     "typecheck": "tsc -b --pretty false"
   },

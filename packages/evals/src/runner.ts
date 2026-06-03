@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
+import { fileURLToPath } from "node:url";
 import { DefaultContextRouter } from "@agent-memory-os/core";
 import { SQLiteMemoryStore } from "@agent-memory-os/sqlite";
 import type {
@@ -116,9 +116,7 @@ function scoreBenchmarkCase(
   };
 }
 
-export async function runBenchmarkCase(
-  benchmarkCase: BenchmarkCase,
-): Promise<BenchmarkCaseResult> {
+export async function runBenchmarkCase(benchmarkCase: BenchmarkCase): Promise<BenchmarkCaseResult> {
   const store = new SQLiteMemoryStore();
 
   try {
@@ -147,16 +145,12 @@ function aggregateMetrics(cases: BenchmarkCaseResult[]): BenchmarkCaseMetrics {
     citationCoverage: roundMetric(average(cases.map((result) => result.citationCoverage))),
     budgetCompliance: roundMetric(average(cases.map((result) => result.budgetCompliance))),
     evidenceCoverage: roundMetric(average(cases.map((result) => result.evidenceCoverage))),
-    contextPackLatencyMs: roundMetric(
-      average(cases.map((result) => result.contextPackLatencyMs)),
-    ),
+    contextPackLatencyMs: roundMetric(average(cases.map((result) => result.contextPackLatencyMs))),
     overallScore: roundMetric(average(cases.map((result) => result.overallScore))),
   };
 }
 
-export async function runBenchmarkCases(
-  benchmarkCases: BenchmarkCase[],
-): Promise<BenchmarkReport> {
+export async function runBenchmarkCases(benchmarkCases: BenchmarkCase[]): Promise<BenchmarkReport> {
   const results: BenchmarkCaseResult[] = [];
 
   for (const benchmarkCase of benchmarkCases) {
