@@ -1,5 +1,19 @@
 # Hermes Install Notes
 
+## Contract Check
+
+Before installing this adapter into a real Hermes checkout, verify the target
+Hermes version and memory plugin contract. Current Hermes documentation describes
+`plugin.yaml`, `register(ctx)`, and lifecycle hooks, while this repo currently
+has a `plugin.json` scaffold and a `MetaMemoryProvider` class.
+
+Treat the steps below as local scaffold setup until that compatibility check is
+complete.
+
+Python is only the Hermes boundary. It maps Hermes calls to the TypeScript CLI
+and must not own memory schema, ranking, persistence, retrieval, verification
+policy, or product behavior.
+
 ## Prerequisites
 
 - Node.js and pnpm that satisfy the repo `engines`.
@@ -28,15 +42,19 @@ pnpm --filter @agent-memory-os/cli link --global
 export META_MEMORY_CLI=meta-memory
 ```
 
-## Install the Plugin
+## Install the Plugin Scaffold
 
-Copy or symlink:
+For local scaffold setup, copy or symlink:
 
 ```text
 adapters/hermes/plugins/memory/meta_memory
 ```
 
 into the Hermes memory plugin directory, then select `meta_memory` as the active memory provider.
+
+If the target Hermes release expects `plugin.yaml` or a `register(ctx)` function,
+update the adapter metadata and registration shape before relying on these
+install notes.
 
 ## Smoke Check Before Hermes
 
