@@ -34,6 +34,33 @@ The CLI defaults to `{ "type": "workspace", "id": "default" }`.
 | Workspace resources | V1.1 implemented | URI-addressed resource tree, backed by audit evidence. |
 | Context packs | V1/V1.1 implemented | Generated, bounded injection views with citations and warnings. |
 
+```mermaid
+flowchart TD
+  Evidence["Evidence events (append-only source)"]
+  Core["Core memory blocks"]
+  Facts["Semantic facts (sourceEventIds JSON)"]
+  Session["Session state projection (sourceEventIds JSON)"]
+  Resources["Workspace resources (sourceEventIds JSON)"]
+  FTS["SQLite FTS indexes"]
+  Search["Search results"]
+  Router["Context router"]
+  Pack["ContextPack items plus verificationWarnings"]
+  Verify["Verification records (targetId)"]
+
+  Evidence --> Facts
+  Evidence --> Session
+  Evidence --> Resources
+  Evidence --> FTS
+  Facts --> FTS
+  Session --> FTS
+  Resources --> FTS
+  Core --> Router
+  FTS --> Search
+  Search --> Router
+  Router --> Pack
+  Verify --> Pack
+```
+
 ## Evidence Events
 
 `EvidenceEvent` is the append-only ledger entry. It stores messages, tool use,

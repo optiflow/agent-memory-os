@@ -69,6 +69,33 @@ creates the parent directory for file-backed `META_MEMORY_DB` paths.
 For user-facing Git installs, point Hermes at the repository root. The root
 `plugin.yaml` and `__init__.py` are a shim that delegates to the nested adapter:
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Maintainer
+  participant Hermes
+  participant Plugin as "meta_memory plugin"
+  participant CLI as "TypeScript CLI"
+  participant DB as "Local SQLite DB"
+
+  Maintainer->>Hermes: Install and enable repo plugin
+  Hermes->>Plugin: Read plugin.yaml and call register(ctx)
+  Maintainer->>Plugin: Call meta_memory.status
+  alt CLI missing or not built
+    Plugin-->>Maintainer: Setup commands and selected DB path
+    Maintainer->>CLI: Build or link meta-memory
+    Maintainer->>Plugin: Call meta_memory.status again
+  else CLI ready
+    Plugin-->>Maintainer: Ready status and selected DB path
+  end
+  Maintainer->>Plugin: Use context_pack, remember, search, or verify
+  Plugin->>CLI: Delegate JSON command
+  CLI->>DB: Read or write local memory
+  DB-->>CLI: Result rows
+  CLI-->>Plugin: JSON stdout
+  Plugin-->>Maintainer: Tool JSON string
+```
+
 ```bash
 hermes plugins install optiflow/agent-memory-os --enable
 ```

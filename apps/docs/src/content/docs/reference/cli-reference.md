@@ -8,6 +8,34 @@ It reads one JSON object from stdin and writes one JSON object to stdout.
 
 Build it before invoking the generated CLI directly:
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Caller as "Hermes adapter or local caller"
+  participant CLI as "meta-memory CLI"
+  participant Store as "SQLite store"
+  participant Router as "Context router"
+
+  Caller->>CLI: Send one JSON object on stdin
+  alt remember, verify, session, or resource write
+    CLI->>Store: Persist evidence, projection, or verification record
+    Store-->>CLI: Stored object
+    CLI-->>Caller: stdout JSON result
+  else search
+    CLI->>Store: Run scoped FTS search
+    Store-->>CLI: SearchResult array
+    CLI-->>Caller: stdout JSON result
+  else context-pack
+    CLI->>Store: Read core, search results, session, and resources
+    CLI->>Router: Apply policy and token budget
+    Router->>Store: Fetch latest non-passed verification records
+    Router-->>CLI: ContextPack
+    CLI-->>Caller: stdout JSON result
+  else invalid input or unknown command
+    CLI-->>Caller: non-zero exit and stderr JSON error
+  end
+```
+
 ```bash
 pnpm --filter @agent-memory-os/cli build
 ```

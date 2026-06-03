@@ -30,7 +30,7 @@ schema, persistence, routing, verification policy, and product behavior.
 | CLI contracts | `pnpm --filter @agent-memory-os/cli test` |
 | Eval or retrieval policy | `pnpm eval` and `pnpm bench:ci` |
 | Hermes adapter | `pnpm adapter:check` |
-| Documentation only | `pnpm lint:repo`; add `pnpm docs:build` for Starlight content, config, or navigation changes. |
+| Documentation only | `pnpm lint:repo`; add `pnpm docs:build` for Starlight content, config, navigation, or rendered Mermaid diagram changes. |
 
 The standalone commands remain available when you need to isolate failures:
 

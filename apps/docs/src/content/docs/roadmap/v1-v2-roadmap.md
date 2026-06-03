@@ -7,6 +7,22 @@ This roadmap preserves the local-first V1 boundary while keeping the report's
 larger Meta Memory OS direction visible. The product shape is one Hermes
 provider with many internal planes, not several competing providers.
 
+```mermaid
+stateDiagram-v2
+  direction LR
+  state "Phase 0: adapter contract alignment (local smoke)" as P0
+  state "Phase 1: local-first V1 implementation" as V1
+  state "Phase 1.1: local-first product hardening" as V11
+  state "Phase 2: safer recall (design only)" as V2
+  state "Phase 3: shared and federated memory (design only)" as V3
+
+  [*] --> P0
+  P0 --> V1: local contract proof
+  V1 --> V11: evidence, facts, FTS, context packs
+  V11 --> V2: future recall-safety work
+  V2 --> V3: after V2 is proven
+```
+
 ## Phase 0: Adapter Contract Alignment
 
 Before adding runtime features, align the Hermes adapter boundary to the current

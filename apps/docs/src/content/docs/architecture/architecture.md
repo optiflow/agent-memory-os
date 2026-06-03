@@ -22,6 +22,19 @@ Event-sourced writes, multi-view storage, routed reads, verified injection.
 This repo is TypeScript-first, not TypeScript-only. Python is required only
 where Hermes needs a Python plugin module.
 
+```mermaid
+flowchart LR
+  Hermes["Hermes Agent"] --> Plugin["meta_memory provider (Python boundary)"]
+  Plugin -- "delegates only" --> CLI["meta-memory CLI (JSON stdin/stdout)"]
+  CLI --> Core["TypeScript core (types, router, packer)"]
+  CLI --> Store["SQLite store (evidence, FTS, projections)"]
+  Core --> Router["Context router (auto, task, workspace)"]
+  Store --> Router
+  Router --> Pack["ContextPack (citations and warnings)"]
+  Pack --> Hermes
+  Plugin -.-> Future["V2 design only: probe, handoff, reflect"]
+```
+
 ## Why One Hermes Provider
 
 Hermes can activate only one external memory provider at a time while built-in

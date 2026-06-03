@@ -1,10 +1,12 @@
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
+import mermaid from "astro-mermaid";
 
 export default defineConfig({
   site: "https://optiflow.github.io",
   base: "/agent-memory-os",
   integrations: [
+    mermaid({ autoTheme: true, theme: "neutral" }),
     starlight({
       title: "Agent Memory OS",
       sidebar: [
