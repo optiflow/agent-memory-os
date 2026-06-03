@@ -4,6 +4,10 @@ This directory contains a thin Python adapter for Hermes Agent. Hermes plugins
 are Python modules, so this adapter delegates all storage and routing work to
 the TypeScript `meta-memory` CLI.
 
+The repository root also contains a Hermes plugin shim for Git-based installs.
+That shim exists only for discovery; this directory remains the implementation
+boundary.
+
 Python must only map Hermes lifecycle and tool calls to the TypeScript CLI. It
 must not own memory schema, ranking, persistence, retrieval, verification
 policy, or product behavior.
@@ -33,30 +37,32 @@ checkout has loaded the plugin and exercised the registered hooks and tools.
 
 ## Local Setup
 
+The plugin can be installed before the TypeScript CLI is ready. In that state,
+call the `meta_memory.status` tool to get CLI availability, database path, and
+next setup commands.
+
 ```bash
 pnpm install
 pnpm --filter @agent-memory-os/cli build
 export META_MEMORY_CLI="node '$PWD/packages/cli/dist/index.js'"
-export META_MEMORY_DB="$HOME/.hermes/meta-memory.sqlite"
-export META_MEMORY_TIMEOUT_SECONDS=20
 ```
 
-You can also link the CLI globally and use the bin name:
+You can also link the CLI globally and leave `META_MEMORY_CLI` unset:
 
 ```bash
 pnpm --filter @agent-memory-os/cli link --global
-export META_MEMORY_CLI=meta-memory
 ```
 
-For local smoke testing, use the adapter directory in this repo. For a real
-Hermes checkout, install the plugin according to that target release's plugin
-directory and enablement rules, then verify that `plugin.yaml`, `register(ctx)`,
-`initialize(...)` behavior, hooks, and tool schemas are discovered.
+For maintainer review or vendoring, use the adapter directory in this repo. For
+ordinary Git-based Hermes installs, point Hermes at the repository root so it
+can discover the root `plugin.yaml` and shim. For a real Hermes checkout, still
+verify that `plugin.yaml`, `register(ctx)`, `initialize(...)` behavior, hooks,
+setup-skill registration when available, and tool schemas are discovered.
 
 ## Configuration
 
-- `META_MEMORY_CLI` is the command Hermes runs. It can be a bin name like `meta-memory` or a command with arguments like `node '/absolute/path/packages/cli/dist/index.js'`.
-- `META_MEMORY_DB` is the SQLite file used by the TypeScript CLI. The adapter creates the parent directory when it is missing.
+- `META_MEMORY_CLI` is optional when `meta-memory` is on `PATH` or the built repo-local CLI exists at `packages/cli/dist/index.js`. It can be a bin name like `meta-memory` or a command with arguments like `node '/absolute/path/packages/cli/dist/index.js'`.
+- `META_MEMORY_DB` is optional. If unset, the adapter uses Hermes home when available, otherwise `~/.hermes/meta-memory.sqlite`. The adapter creates the parent directory when it is missing.
 - `META_MEMORY_TIMEOUT_SECONDS` defaults to `20` and must be a positive number.
 
 The adapter always sends its configured `META_MEMORY_DB` to the CLI. Tool-call arguments cannot override the database path.
@@ -65,6 +71,7 @@ The adapter always sends its configured `META_MEMORY_DB` to the CLI. Tool-call a
 
 The adapter currently exposes the v1/v1.1 tools:
 
+- `status`
 - `context_pack`
 - `remember`
 - `search`
@@ -93,6 +100,7 @@ provider callbacks and hooks stay thin bridges to the same CLI behavior:
 | `prefetch` | `context-pack` | Builds a bounded context pack before a turn. |
 | `sync_turn` | `remember` | Appends user and assistant messages asynchronously. |
 | `on_memory_write` | `remember` | Mirrors explicit memory writes. |
+| `handle_tool_call("status")` | none | Reports adapter configuration without calling the CLI. |
 | `handle_tool_call("context_pack")` | `context-pack` | Manual context-pack inspection. |
 | `handle_tool_call("remember")` | `remember` | Explicit memory event append. |
 | `handle_tool_call("search")` | `search` | Local memory search. |
@@ -106,6 +114,7 @@ Tool-call arguments cannot override the configured database path.
 ## Smoke Checks
 
 ```bash
+python3 -m py_compile __init__.py
 python3 -m py_compile adapters/hermes/plugins/memory/meta_memory/__init__.py
 python3 -m unittest discover adapters/hermes/plugins/memory/meta_memory/test
 pnpm adapter:check
@@ -120,7 +129,8 @@ echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"bud
   | node packages/cli/dist/index.js context-pack
 ```
 
-These checks prove the local adapter, manifest, `initialize(...)`,
-`register(ctx)`, tool schemas, hook registration fixture, and CLI bridge. They
-do not prove live Hermes plugin discovery, enablement, lifecycle hook execution,
-or production installation for a specific Hermes release.
+These checks prove the local adapter, root shim, manifests, `initialize(...)`,
+`register(ctx)`, setup-skill registration fixture, tool schemas, hook
+registration fixture, progressive status diagnostics, and CLI bridge. They do
+not prove live Hermes plugin discovery, enablement, lifecycle hook execution, or
+production installation for a specific Hermes release.

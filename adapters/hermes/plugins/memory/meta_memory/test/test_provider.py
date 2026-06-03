@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -10,11 +11,22 @@ from pathlib import Path
 from unittest.mock import patch
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "__init__.py"
-SPEC = importlib.util.spec_from_file_location("meta_memory_provider", MODULE_PATH)
-assert SPEC is not None
-assert SPEC.loader is not None
-meta_memory = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(meta_memory)
+ROOT_DIR = MODULE_PATH.parents[5]
+ROOT_MODULE_PATH = ROOT_DIR / "__init__.py"
+ROOT_PLUGIN_YAML_PATH = ROOT_DIR / "plugin.yaml"
+SETUP_SKILL_PATH = ROOT_DIR / "skills" / "agent-memory-os-setup" / "SKILL.md"
+
+
+def load_module(path: Path, name: str) -> object:
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+meta_memory = load_module(MODULE_PATH, "meta_memory_provider")
 
 PLUGIN_DIR = MODULE_PATH.parent
 PLUGIN_YAML_PATH = PLUGIN_DIR / "plugin.yaml"
@@ -26,6 +38,7 @@ class FakeHermesContext:
         self.providers: list[object] = []
         self.tools: list[dict[str, object]] = []
         self.hooks: dict[str, object] = {}
+        self.skills: list[tuple[str, Path]] = []
 
     def register_memory_provider(self, provider: object) -> None:
         self.providers.append(provider)
@@ -35,6 +48,9 @@ class FakeHermesContext:
 
     def register_hook(self, name: str, handler: object) -> None:
         self.hooks[name] = handler
+
+    def register_skill(self, name: str, skill_path: Path) -> None:
+        self.skills.append((name, skill_path))
 
 
 class ImmediateThread:
@@ -86,13 +102,42 @@ class MetaMemoryProviderTest(unittest.TestCase):
 
     def test_plugin_metadata_uses_yaml_manifest(self) -> None:
         metadata = parse_plugin_yaml(PLUGIN_YAML_PATH)
+        root_metadata = parse_plugin_yaml(ROOT_PLUGIN_YAML_PATH)
+        expected_tools = [
+            "status",
+            "context_pack",
+            "remember",
+            "search",
+            "upsert_session_state",
+            "upsert_resource",
+            "browse_resources",
+            "verify",
+        ]
 
         self.assertFalse(PLUGIN_JSON_PATH.exists())
         self.assertEqual("meta_memory", metadata["name"])
         self.assertEqual("0.1.0", metadata["version"])
         self.assertEqual("MetaMemoryProvider", metadata["provider_class"])
+        self.assertEqual(expected_tools, metadata["provides_tools"])
+        self.assertEqual(["on_session_end"], metadata["provides_hooks"])
+        self.assertEqual("meta_memory", root_metadata["name"])
+        self.assertEqual(expected_tools, root_metadata["provides_tools"])
+
+    def test_root_plugin_shim_delegates_to_nested_adapter(self) -> None:
+        root_meta_memory = load_module(ROOT_MODULE_PATH, "root_meta_memory_provider")
+
+        with provider_env():
+            provider = root_meta_memory.initialize(session_id="session-root")
+
+        ctx = FakeHermesContext()
+        registered = root_meta_memory.register(ctx)
+
+        self.assertEqual("MetaMemoryProvider", provider.__class__.__name__)
+        self.assertIs(provider, registered)
+        self.assertEqual([provider], ctx.providers)
         self.assertEqual(
             [
+                "status",
                 "context_pack",
                 "remember",
                 "search",
@@ -101,9 +146,9 @@ class MetaMemoryProviderTest(unittest.TestCase):
                 "browse_resources",
                 "verify",
             ],
-            metadata["provides_tools"],
+            [tool["name"] for tool in ctx.tools],
         )
-        self.assertEqual(["on_session_end"], metadata["provides_hooks"])
+        self.assertEqual([("agent-memory-os-setup", SETUP_SKILL_PATH)], ctx.skills)
 
     def test_initialize_creates_provider_and_records_startup_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -121,6 +166,27 @@ class MetaMemoryProviderTest(unittest.TestCase):
             self.assertEqual(str(Path(temp_dir) / "hermes"), provider._hermes_home)
             self.assertTrue(db_path.parent.exists())
 
+    def test_initialize_uses_hermes_home_db_path_when_db_env_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            hermes_home = Path(temp_dir) / "hermes-home"
+
+            with patch.dict(
+                os.environ,
+                {
+                    "META_MEMORY_CLI": "definitely-missing-meta-memory",
+                    "META_MEMORY_TIMEOUT_SECONDS": "20",
+                },
+                clear=True,
+            ):
+                provider = meta_memory.initialize(
+                    session_id="session-123",
+                    hermes_home=hermes_home,
+                )
+
+            self.assertEqual(str(hermes_home / "meta-memory.sqlite"), provider._db_path)
+            self.assertEqual("hermes_home", provider._db_path_source)
+            self.assertTrue(hermes_home.exists())
+
     def test_register_wires_provider_tools_and_session_end_hook(self) -> None:
         with provider_env():
             provider = meta_memory.initialize(session_id="session-123")
@@ -132,6 +198,7 @@ class MetaMemoryProviderTest(unittest.TestCase):
         self.assertEqual([provider], ctx.providers)
         self.assertEqual(
             [
+                "status",
                 "context_pack",
                 "remember",
                 "search",
@@ -144,6 +211,7 @@ class MetaMemoryProviderTest(unittest.TestCase):
         )
         self.assertEqual({"on_session_end"}, set(ctx.hooks))
         self.assertEqual(ctx.hooks["on_session_end"], provider.on_session_end)
+        self.assertEqual([("agent-memory-os-setup", SETUP_SKILL_PATH)], ctx.skills)
 
         search_tool = next(tool for tool in ctx.tools if tool["name"] == "search")
         with patch.object(provider, "handle_tool_call", return_value='{"results": []}') as handle:
@@ -160,6 +228,7 @@ class MetaMemoryProviderTest(unittest.TestCase):
 
         self.assertEqual(
             [
+                "status",
                 "context_pack",
                 "remember",
                 "search",
@@ -179,6 +248,56 @@ class MetaMemoryProviderTest(unittest.TestCase):
 
         verify_schema = next(schema for schema in schemas if schema["name"] == "verify")
         self.assertEqual(["targetId", "message"], verify_schema["parameters"]["required"])
+
+    def test_status_reports_missing_cli_without_running_subprocess(self) -> None:
+        with provider_env(META_MEMORY_CLI="definitely-missing-meta-memory"):
+            provider = meta_memory.MetaMemoryProvider()
+
+        with patch.object(meta_memory.subprocess, "run") as run:
+            result = json.loads(provider.handle_tool_call("status", {}))
+
+        run.assert_not_called()
+        self.assertFalse(provider.is_available())
+        self.assertEqual("configuration_required", result["status"])
+        self.assertFalse(result["cli"]["available"])
+        self.assertEqual("environment", result["cli"]["source"])
+        self.assertEqual(":memory:", result["database"]["path"])
+        self.assertTrue(result["nextSetupCommands"])
+        self.assertIn("not configured", provider.system_prompt_block())
+
+    def test_status_reports_env_configured_cli(self) -> None:
+        cli_path = "/tmp/agent-memory-os-cli.js"
+        with provider_env(META_MEMORY_CLI=f"node {shlex.quote(cli_path)}"):
+            provider = meta_memory.MetaMemoryProvider()
+
+        result = provider.status()
+
+        self.assertEqual("environment", result["cli"]["source"])
+        self.assertEqual(f"node {shlex.quote(cli_path)}", result["cli"]["command"])
+        self.assertEqual(cli_path, result["cli"]["targetPath"])
+        self.assertFalse(result["cli"]["targetExists"])
+
+    def test_repo_local_built_cli_is_used_when_env_cli_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            cli_path = repo_root / "packages" / "cli" / "dist" / "index.js"
+            cli_path.parent.mkdir(parents=True)
+            cli_path.touch()
+
+            with (
+                patch.dict(os.environ, {"META_MEMORY_DB": ":memory:"}, clear=True),
+                patch.object(meta_memory, "_repo_root", return_value=repo_root),
+                patch.object(meta_memory, "_repo_cli_path", return_value=cli_path),
+                patch.object(meta_memory.shutil, "which", return_value="/usr/bin/node"),
+            ):
+                provider = meta_memory.MetaMemoryProvider()
+                result = provider.status()
+
+        self.assertEqual("repo-local", result["cli"]["source"])
+        self.assertEqual(f"node {shlex.quote(str(cli_path))}", result["cli"]["command"])
+        self.assertTrue(result["cli"]["available"])
+        self.assertEqual("ready", result["status"])
+        self.assertEqual([], result["nextSetupCommands"])
 
     def test_run_uses_configured_db_path_and_creates_parent(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -18,6 +18,7 @@ from typing import Any
 
 DEFAULT_DB_PATH = str(Path.home() / ".hermes" / "meta-memory.sqlite")
 DEFAULT_TIMEOUT_SECONDS = 20.0
+SETUP_SKILL_NAME = "agent-memory-os-setup"
 TOOLSET = "meta_memory"
 
 try:
@@ -36,9 +37,8 @@ class MetaMemoryProvider(MemoryProvider):
     description = "Local-first meta memory provider backed by TypeScript and SQLite + FTS."
 
     def __init__(self) -> None:
-        self._cli = _read_cli()
-        self._db_path = _read_db_path()
-        self._db_path_configured = _has_db_path_env()
+        self._cli, self._cli_source = _read_cli_config()
+        self._db_path, self._db_path_source, self._db_path_configured = _read_db_path_config()
         self._timeout_seconds = _read_timeout_seconds()
         self._session_id: str | None = None
         self._hermes_home: str | None = None
@@ -58,18 +58,48 @@ class MetaMemoryProvider(MemoryProvider):
         self._platform = platform
         self._agent_context = agent_context
         if not self._db_path_configured:
-            self._db_path = _read_db_path(hermes_home)
+            self._db_path, self._db_path_source, _ = _read_db_path_config(hermes_home)
         self._ensure_db_parent()
 
     def is_available(self) -> bool:
-        try:
-            executable = self._command_parts()[0]
-        except RuntimeError:
-            return False
+        return bool(self._cli_status()["available"])
 
-        return bool(shutil.which(executable) or Path(executable).exists())
+    def status(self) -> dict[str, Any]:
+        cli = self._cli_status()
+        ready = bool(cli["available"])
+        db_parent: str | None = None
+        db_parent_exists: bool | None = None
+        if self._db_path != ":memory:":
+            parent = Path(self._db_path).expanduser().parent
+            db_parent = str(parent)
+            db_parent_exists = parent.exists()
+
+        return {
+            "status": "ready" if ready else "configuration_required",
+            "message": (
+                "Agent Memory OS is ready."
+                if ready
+                else "Build or link the meta-memory CLI before using memory tools."
+            ),
+            "cli": cli,
+            "database": {
+                "path": self._db_path,
+                "source": self._db_path_source,
+                "parent": db_parent,
+                "parentExists": db_parent_exists,
+            },
+            "timeoutSeconds": self._timeout_seconds,
+            "writesEnabled": self._should_write(),
+            "nextSetupCommands": [] if ready else _next_setup_commands(),
+        }
 
     def system_prompt_block(self) -> str:
+        if not self.is_available():
+            return (
+                "Agent Memory OS is installed but not configured. Call meta_memory.status "
+                "before relying on memory tools."
+            )
+
         return (
             "Agent Memory OS is available. Use injected memory only when it is relevant, "
             "cite memory identifiers when relying on them, and treat verification warnings as higher priority."
@@ -164,6 +194,16 @@ class MetaMemoryProvider(MemoryProvider):
 
     def get_tool_schemas(self) -> list[dict[str, Any]]:
         return [
+            {
+                "name": "status",
+                "description": "Report adapter configuration and CLI readiness without calling the CLI.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                    "additionalProperties": False,
+                },
+            },
             {
                 "name": "context_pack",
                 "description": "Build a bounded memory context pack for a query.",
@@ -269,6 +309,9 @@ class MetaMemoryProvider(MemoryProvider):
         ]
 
     def handle_tool_call(self, name: str, arguments: dict[str, Any], **_: Any) -> str:
+        if name == "status":
+            return json.dumps(self.status(), ensure_ascii=False)
+
         command_by_tool = {
             "context_pack": "context-pack",
             "remember": "remember",
@@ -329,6 +372,39 @@ class MetaMemoryProvider(MemoryProvider):
 
         return parts
 
+    def _cli_status(self) -> dict[str, Any]:
+        try:
+            parts = self._command_parts()
+        except RuntimeError:
+            return {
+                "command": self._cli,
+                "source": self._cli_source,
+                "available": False,
+                "executable": "",
+                "executableAvailable": False,
+                "targetPath": None,
+                "targetExists": None,
+            }
+
+        executable = parts[0]
+        executable_available = bool(shutil.which(executable) or Path(executable).exists())
+        target_path: str | None = None
+        target_exists: bool | None = None
+        if len(parts) == 2 and executable in ("node", "nodejs"):
+            target = Path(parts[1]).expanduser()
+            target_path = str(target)
+            target_exists = target.exists()
+
+        return {
+            "command": self._cli,
+            "source": self._cli_source,
+            "available": executable_available and target_exists is not False,
+            "executable": executable,
+            "executableAvailable": executable_available,
+            "targetPath": target_path,
+            "targetExists": target_exists,
+        }
+
     def _ensure_db_parent(self) -> None:
         if self._db_path == ":memory:":
             return
@@ -342,7 +418,19 @@ class MetaMemoryProvider(MemoryProvider):
 
 
 def _read_cli() -> str:
-    return os.environ.get("META_MEMORY_CLI", "").strip() or "meta-memory"
+    return _read_cli_config()[0]
+
+
+def _read_cli_config() -> tuple[str, str]:
+    configured = os.environ.get("META_MEMORY_CLI", "").strip()
+    if configured:
+        return configured, "environment"
+
+    repo_cli = _repo_cli_path()
+    if repo_cli.exists():
+        return f"node {shlex.quote(str(repo_cli))}", "repo-local"
+
+    return "meta-memory", "path"
 
 
 def _has_db_path_env() -> bool:
@@ -350,14 +438,77 @@ def _has_db_path_env() -> bool:
 
 
 def _read_db_path(hermes_home: str | Path | None = None) -> str:
-    db_path = os.environ.get("META_MEMORY_DB", "").strip() or DEFAULT_DB_PATH
-    if not _has_db_path_env() and hermes_home is not None:
-        db_path = str(Path(hermes_home).expanduser() / "meta-memory.sqlite")
+    return _read_db_path_config(hermes_home)[0]
 
+
+def _read_db_path_config(hermes_home: str | Path | None = None) -> tuple[str, str, bool]:
+    configured = os.environ.get("META_MEMORY_DB", "").strip()
+    if configured:
+        return _normalize_db_path(configured), "environment", True
+
+    if hermes_home is not None:
+        return (
+            _normalize_db_path(str(Path(hermes_home).expanduser() / "meta-memory.sqlite")),
+            "hermes_home",
+            False,
+        )
+
+    return _normalize_db_path(DEFAULT_DB_PATH), "default", False
+
+
+def _normalize_db_path(db_path: str) -> str:
     if db_path == ":memory:":
         return db_path
 
     return str(Path(db_path).expanduser())
+
+
+def _repo_root() -> Path:
+    module_path = Path(__file__).resolve()
+    try:
+        return module_path.parents[5]
+    except IndexError:
+        return module_path.parent
+
+
+def _repo_cli_path() -> Path:
+    return _repo_root() / "packages" / "cli" / "dist" / "index.js"
+
+
+def _next_setup_commands() -> list[str]:
+    repo_root = _repo_root()
+    repo_cli = _repo_cli_path()
+    return [
+        f"cd {shlex.quote(str(repo_root))}",
+        "pnpm install",
+        "pnpm --filter @agent-memory-os/cli build",
+        f"export META_MEMORY_CLI=\"node {shlex.quote(str(repo_cli))}\"",
+        "# Optional alternative: pnpm --filter @agent-memory-os/cli link --global",
+    ]
+
+
+def _setup_skill_path() -> Path | None:
+    candidates = [
+        Path(__file__).resolve().parent / "skills" / SETUP_SKILL_NAME / "SKILL.md",
+        _repo_root() / "skills" / SETUP_SKILL_NAME / "SKILL.md",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+
+    return None
+
+
+def _register_setup_skill(ctx: Any) -> None:
+    register_skill = getattr(ctx, "register_skill", None)
+    if not callable(register_skill):
+        return
+
+    skill_path = _setup_skill_path()
+    if skill_path is None:
+        return
+
+    register_skill(SETUP_SKILL_NAME, skill_path)
 
 
 def _session_scope(session_id: str | None) -> dict[str, str] | None:
@@ -427,6 +578,7 @@ def register(ctx: Any) -> MetaMemoryProvider:
         )
 
     ctx.register_hook("on_session_end", provider.on_session_end)
+    _register_setup_skill(ctx)
     return provider
 
 

@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@11.5.1",
   "scripts": {
-    "adapter:check": "python3 -m py_compile adapters/hermes/plugins/memory/meta_memory/__init__.py adapters/hermes/plugins/memory/meta_memory/test/test_provider.py && python3 -m unittest discover adapters/hermes/plugins/memory/meta_memory/test",
+    "adapter:check": "python3 -m py_compile __init__.py adapters/hermes/plugins/memory/meta_memory/__init__.py adapters/hermes/plugins/memory/meta_memory/test/test_provider.py && python3 -m unittest discover adapters/hermes/plugins/memory/meta_memory/test",
     "bench": "turbo run bench --filter @agent-memory-os/evals",
     "bench:ci": "turbo run bench:ci --filter @agent-memory-os/evals",
     "build": "turbo run build",
