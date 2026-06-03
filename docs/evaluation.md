@@ -39,9 +39,10 @@ echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"bud
 
 Expected result:
 
-- the first command returns sample core, event, and fact records;
+- the first command returns sample core, event, fact, session-state, and
+  workspace-resource records;
 - the second command returns `contextPack`;
-- the context pack includes the seeded Biome memory;
+- the context pack includes the seeded Biome memory and V1.1 projections;
 - citations are present on included items.
 
 ## Adapter Smoke Test
@@ -55,7 +56,7 @@ pnpm adapter:check
 These commands are local adapter-boundary smoke proof. They cover the
 `plugin.yaml` manifest fixture, absence of stale JSON metadata, `initialize(...)`
 bridge setup, `register(ctx)` wiring, the local `on_session_end` hook fixture,
-Hermes `parameters` tool schemas, and CLI delegation.
+Hermes `parameters` tool schemas, JSON-string tool results, and CLI delegation.
 
 Before real Hermes integration testing, verify the target Hermes plugin contract
 against a live checkout. Local fixture coverage does not prove Hermes runtime
@@ -66,12 +67,15 @@ discovery, enablement, or hook execution.
 Current local tests cover:
 
 - FTS search returns evidence and facts;
-- context packing respects token budgets;
+- FTS search returns session state and workspace resources;
+- context packing respects token budgets and `auto`/`task`/`workspace` policy
+  boundaries;
 - CLI seed and context-pack smoke behavior;
 - Hermes adapter metadata uses `plugin.yaml`;
-- adapter `initialize(...)` and `register(ctx)` wire the provider, v1 tools, and
-  `on_session_end` hook in a local fixture;
+- adapter `initialize(...)` and `register(ctx)` wire the provider, v1/v1.1
+  tools, and `on_session_end` hook in a local fixture;
 - adapter tool schemas use the Hermes `parameters` shape;
+- adapter tool handlers return JSON strings;
 - adapter tool-call arguments cannot override configured `META_MEMORY_DB`;
 - adapter CLI failure handling.
 
@@ -117,8 +121,6 @@ the local storage behavior that affects memory quality.
 Future v1 feature work should add tests for:
 
 - write path preserves evidence before derived facts;
-- verification records can be retrieved and populated into packs when the router
-  grows warning-aware injection;
 - adapter subprocess timeouts fail clearly;
 - real Hermes plugin discovery, hook execution, and tool schema registration for
   a target Hermes version.

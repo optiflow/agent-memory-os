@@ -18,7 +18,8 @@ Current Hermes documentation describes local plugins with:
   `ctx.register_hook(...)`;
 - lifecycle hook names such as `pre_tool_call`, `post_tool_call`,
   `pre_llm_call`, `post_llm_call`, `on_session_start`, and `on_session_end`;
-- JSON-style tool schemas paired with Python handlers.
+- OpenAI-style tool schemas with `parameters` paired with Python handlers that
+  return JSON strings.
 
 This adapter exposes `initialize(...)` as bridge setup only: read environment,
 prepare CLI and SQLite path configuration, and avoid owning memory schema,
@@ -62,11 +63,14 @@ The adapter always sends its configured `META_MEMORY_DB` to the CLI. Tool-call a
 
 ## Adapter Boundary
 
-The adapter currently exposes only four v1 tools:
+The adapter currently exposes the v1/v1.1 tools:
 
 - `context_pack`
 - `remember`
 - `search`
+- `upsert_session_state`
+- `upsert_resource`
+- `browse_resources`
 - `verify`
 
 `handoff` and `reflect` are intentionally deferred to v2.
@@ -79,7 +83,7 @@ command.
 
 ## Lifecycle Mapping
 
-The current scaffold maps Hermes-facing behavior to CLI commands. In the
+The current adapter maps Hermes-facing behavior to CLI commands. In the
 `register(ctx)` integration, tool methods become registered handlers, while
 provider callbacks and hooks stay thin bridges to the same CLI behavior:
 
@@ -92,6 +96,9 @@ provider callbacks and hooks stay thin bridges to the same CLI behavior:
 | `handle_tool_call("context_pack")` | `context-pack` | Manual context-pack inspection. |
 | `handle_tool_call("remember")` | `remember` | Explicit memory event append. |
 | `handle_tool_call("search")` | `search` | Local memory search. |
+| `handle_tool_call("upsert_session_state")` | `upsert-session-state` | Compact active task-state update. |
+| `handle_tool_call("upsert_resource")` | `upsert-resource` | Workspace resource update. |
+| `handle_tool_call("browse_resources")` | `browse-resources` | Workspace resource listing. |
 | `handle_tool_call("verify")` | `verify` | Verification record append. |
 
 Tool-call arguments cannot override the configured database path.

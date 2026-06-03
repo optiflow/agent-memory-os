@@ -38,18 +38,27 @@ class MetaMemoryProvider(MemoryProvider):
     def __init__(self) -> None:
         self._cli = _read_cli()
         self._db_path = _read_db_path()
+        self._db_path_configured = _has_db_path_env()
         self._timeout_seconds = _read_timeout_seconds()
         self._session_id: str | None = None
         self._hermes_home: str | None = None
+        self._agent_context = "primary"
+        self._platform = ""
 
     def initialize(
         self,
         session_id: str | None = None,
         hermes_home: str | Path | None = None,
+        platform: str = "",
+        agent_context: str = "primary",
         **_: Any,
     ) -> None:
         self._session_id = session_id
         self._hermes_home = str(hermes_home) if hermes_home is not None else None
+        self._platform = platform
+        self._agent_context = agent_context
+        if not self._db_path_configured:
+            self._db_path = _read_db_path(hermes_home)
         self._ensure_db_parent()
 
     def is_available(self) -> bool:
@@ -66,55 +75,91 @@ class MetaMemoryProvider(MemoryProvider):
             "cite memory identifiers when relying on them, and treat verification warnings as higher priority."
         )
 
-    def prefetch(self, query: str, **_: Any) -> str:
+    def prefetch(self, query: str, *, session_id: str = "", **_: Any) -> str:
+        payload: dict[str, Any] = {
+            "dbPath": self._db_path,
+            "query": query,
+            "budgetTokens": 1200,
+        }
+        scope = _session_scope(session_id or self._session_id)
+        if scope is not None:
+            payload["scope"] = scope
+
         result = self._run(
             "context-pack",
-            {
-                "dbPath": self._db_path,
-                "query": query,
-                "budgetTokens": 1200,
-            },
+            payload,
         )
         return json.dumps(result.get("contextPack", result), ensure_ascii=False)
 
-    def sync_turn(self, user: str, assistant: str, **_: Any) -> None:
+    def sync_turn(
+        self,
+        user_content: str,
+        assistant_content: str,
+        *,
+        session_id: str = "",
+        messages: list[dict[str, Any]] | None = None,
+    ) -> None:
+        if not self._should_write():
+            return None
+
         def sync() -> None:
-            if user:
+            metadata = {
+                "session_id": session_id or self._session_id or "",
+                "message_count": len(messages) if messages is not None else 0,
+                "platform": self._platform,
+            }
+            if user_content:
                 self._run(
                     "remember",
                     {
                         "dbPath": self._db_path,
                         "kind": "user_message",
                         "actor": "user",
-                        "content": user,
+                        "content": user_content,
+                        "metadata": metadata,
                     },
                 )
-            if assistant:
+            if assistant_content:
                 self._run(
                     "remember",
                     {
                         "dbPath": self._db_path,
                         "kind": "assistant_message",
                         "actor": "assistant",
-                        "content": assistant,
+                        "content": assistant_content,
+                        "metadata": metadata,
                     },
                 )
 
         thread = threading.Thread(target=sync, daemon=True)
         thread.start()
 
-    def on_memory_write(self, content: str, **kwargs: Any) -> dict[str, Any]:
-        return self._run(
+    def on_memory_write(
+        self,
+        action: str,
+        target: str,
+        content: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        if not self._should_write():
+            return None
+
+        self._run(
             "remember",
             {
                 "dbPath": self._db_path,
                 "kind": "explicit_memory",
                 "content": content,
-                "metadata": kwargs,
+                "metadata": {
+                    "action": action,
+                    "target": target,
+                    **(metadata or {}),
+                },
             },
         )
+        return None
 
-    def on_session_end(self, **_: Any) -> None:
+    def on_session_end(self, messages: list[dict[str, Any]] | None = None, **_: Any) -> None:
         return None
 
     def get_tool_schemas(self) -> list[dict[str, Any]]:
@@ -127,6 +172,7 @@ class MetaMemoryProvider(MemoryProvider):
                     "properties": {
                         "query": {"type": "string", "minLength": 1},
                         "budgetTokens": {"type": "integer", "minimum": 1},
+                        "policy": {"type": "string", "enum": ["auto", "task", "workspace"]},
                     },
                     "required": ["query"],
                     "additionalProperties": False,
@@ -156,6 +202,54 @@ class MetaMemoryProvider(MemoryProvider):
                 },
             },
             {
+                "name": "upsert_session_state",
+                "description": "Update the compact active session-state projection.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string", "minLength": 1},
+                        "currentGoal": {"type": "string", "minLength": 1},
+                        "summary": {"type": "string", "minLength": 1},
+                        "status": {"type": "string", "enum": ["active", "blocked", "complete"]},
+                        "workingSet": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["id", "currentGoal", "summary"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "upsert_resource",
+                "description": "Add or update a browseable workspace resource.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "uri": {"type": "string", "minLength": 1},
+                        "title": {"type": "string", "minLength": 1},
+                        "content": {"type": "string", "minLength": 1},
+                        "kind": {
+                            "type": "string",
+                            "enum": ["doc", "file", "note", "other", "url"],
+                        },
+                        "parentUri": {"type": "string", "minLength": 1},
+                    },
+                    "required": ["uri", "title", "content"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "browse_resources",
+                "description": "List workspace resources under an optional parent URI.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "parentUri": {"type": "string", "minLength": 1},
+                        "limit": {"type": "integer", "minimum": 1},
+                    },
+                    "required": [],
+                    "additionalProperties": False,
+                },
+            },
+            {
                 "name": "verify",
                 "description": "Record verification status for a memory item.",
                 "parameters": {
@@ -174,18 +268,22 @@ class MetaMemoryProvider(MemoryProvider):
             },
         ]
 
-    def handle_tool_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    def handle_tool_call(self, name: str, arguments: dict[str, Any], **_: Any) -> str:
         command_by_tool = {
             "context_pack": "context-pack",
             "remember": "remember",
             "search": "search",
+            "upsert_session_state": "upsert-session-state",
+            "upsert_resource": "upsert-resource",
+            "browse_resources": "browse-resources",
             "verify": "verify",
         }
 
         if name not in command_by_tool:
             raise ValueError(f"Unsupported meta memory tool: {name}")
 
-        return self._run(command_by_tool[name], {**arguments, "dbPath": self._db_path})
+        result = self._run(command_by_tool[name], {**arguments, "dbPath": self._db_path})
+        return json.dumps(result, ensure_ascii=False)
 
     def _run(self, command: str, payload: dict[str, Any]) -> dict[str, Any]:
         command_parts = self._command_parts()
@@ -239,17 +337,34 @@ class MetaMemoryProvider(MemoryProvider):
         if parent != Path("."):
             parent.mkdir(parents=True, exist_ok=True)
 
+    def _should_write(self) -> bool:
+        return self._agent_context in ("", "primary")
+
 
 def _read_cli() -> str:
     return os.environ.get("META_MEMORY_CLI", "").strip() or "meta-memory"
 
 
-def _read_db_path() -> str:
+def _has_db_path_env() -> bool:
+    return bool(os.environ.get("META_MEMORY_DB", "").strip())
+
+
+def _read_db_path(hermes_home: str | Path | None = None) -> str:
     db_path = os.environ.get("META_MEMORY_DB", "").strip() or DEFAULT_DB_PATH
+    if not _has_db_path_env() and hermes_home is not None:
+        db_path = str(Path(hermes_home).expanduser() / "meta-memory.sqlite")
+
     if db_path == ":memory:":
         return db_path
 
     return str(Path(db_path).expanduser())
+
+
+def _session_scope(session_id: str | None) -> dict[str, str] | None:
+    if not session_id:
+        return None
+
+    return {"type": "session", "id": session_id}
 
 
 def _read_timeout_seconds() -> float:
@@ -315,9 +430,9 @@ def register(ctx: Any) -> MetaMemoryProvider:
     return provider
 
 
-def on_session_end(**kwargs: Any) -> None:
+def on_session_end(messages: list[dict[str, Any]] | None = None, **kwargs: Any) -> None:
     provider = _active_provider()
-    provider.on_session_end(**kwargs)
+    provider.on_session_end(messages, **kwargs)
 
 
 def _active_provider() -> MetaMemoryProvider:
@@ -331,8 +446,8 @@ def _active_provider() -> MetaMemoryProvider:
 def _tool_handler(
     provider: MetaMemoryProvider,
     name: str,
-) -> Callable[[dict[str, Any] | None], dict[str, Any]]:
-    def handle(params: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+) -> Callable[[dict[str, Any] | None], str]:
+    def handle(params: dict[str, Any] | None = None, **kwargs: Any) -> str:
         arguments: dict[str, Any] = {}
         if params:
             arguments.update(params)

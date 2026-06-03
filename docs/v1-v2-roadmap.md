@@ -14,7 +14,7 @@ local plugin contract and prove it locally:
 - `initialize(...)` bridge setup;
 - lifecycle hook names and current `on_session_end` registration;
 - tool schemas and handler registration for `context_pack`, `remember`,
-  `search`, and `verify`;
+  `search`, V1.1 session/resource tools, and `verify`;
 - local smoke proof for adapter compilation, manifest shape, `initialize(...)`,
   `register(ctx)`, tool schemas, CLI delegation, configured SQLite path
   handling, and tool-call argument boundaries.
@@ -44,19 +44,22 @@ V1 does not include vector search, graph databases, cloud providers, LLM
 extraction, reflection, connector sync, social memory, or a second Hermes
 provider.
 
-## Phase 1.1: Future V1 Product Hardening
+## Phase 1.1: V1 Product Hardening
 
-These may be designed after the adapter contract is proven, but they are not
-implemented by the current scaffold:
+These are implemented as local-first, dependency-light projections:
 
 - active session-state projection for compact current-task memory;
 - browseable workspace/resource tree;
-- richer context-router policy;
-- explicit adapter smoke fixture against a known Hermes version.
+- richer context-router policy with `auto`, `task`, and `workspace` modes;
+- local adapter smoke fixture for manifest shape, `initialize(...)`,
+  `register(ctx)`, tool schemas, handler delegation, and hook signatures.
 
 Any future v1 additions must stay local-first, auditable, and dependency-light.
 Session state and workspace tree work should not introduce a vector DB, graph DB,
 cloud memory provider, connector sync, or LLM extraction dependency.
+
+This is still not a production Hermes installation claim until a target Hermes
+checkout loads the plugin and exercises the hooks/tools end to end.
 
 ## Phase 2: Safer Recall
 

@@ -92,7 +92,15 @@ class MetaMemoryProviderTest(unittest.TestCase):
         self.assertEqual("0.1.0", metadata["version"])
         self.assertEqual("MetaMemoryProvider", metadata["provider_class"])
         self.assertEqual(
-            ["context_pack", "remember", "search", "verify"],
+            [
+                "context_pack",
+                "remember",
+                "search",
+                "upsert_session_state",
+                "upsert_resource",
+                "browse_resources",
+                "verify",
+            ],
             metadata["provides_tools"],
         )
         self.assertEqual(["on_session_end"], metadata["provides_hooks"])
@@ -123,17 +131,25 @@ class MetaMemoryProviderTest(unittest.TestCase):
         self.assertIs(provider, registered)
         self.assertEqual([provider], ctx.providers)
         self.assertEqual(
-            ["context_pack", "remember", "search", "verify"],
+            [
+                "context_pack",
+                "remember",
+                "search",
+                "upsert_session_state",
+                "upsert_resource",
+                "browse_resources",
+                "verify",
+            ],
             [tool["name"] for tool in ctx.tools],
         )
         self.assertEqual({"on_session_end"}, set(ctx.hooks))
         self.assertEqual(ctx.hooks["on_session_end"], provider.on_session_end)
 
         search_tool = next(tool for tool in ctx.tools if tool["name"] == "search")
-        with patch.object(provider, "handle_tool_call", return_value={"results": []}) as handle:
+        with patch.object(provider, "handle_tool_call", return_value='{"results": []}') as handle:
             result = search_tool["handler"]({"query": "Biome"})
 
-        self.assertEqual({"results": []}, result)
+        self.assertEqual('{"results": []}', result)
         handle.assert_called_once_with("search", {"query": "Biome"})
 
     def test_tool_schemas_use_hermes_parameters_shape(self) -> None:
@@ -143,7 +159,15 @@ class MetaMemoryProviderTest(unittest.TestCase):
         schemas = provider.get_tool_schemas()
 
         self.assertEqual(
-            ["context_pack", "remember", "search", "verify"],
+            [
+                "context_pack",
+                "remember",
+                "search",
+                "upsert_session_state",
+                "upsert_resource",
+                "browse_resources",
+                "verify",
+            ],
             [schema["name"] for schema in schemas],
         )
         for schema in schemas:
@@ -175,7 +199,7 @@ class MetaMemoryProviderTest(unittest.TestCase):
                     {"query": "Biome formatter", "dbPath": "/tmp/ignored.sqlite"},
                 )
 
-            self.assertEqual({"results": []}, result)
+            self.assertEqual({"results": []}, json.loads(result))
             self.assertTrue(db_path.parent.exists())
             self.assertEqual(["meta-memory", "search"], run.call_args.args[0])
 
@@ -183,7 +207,7 @@ class MetaMemoryProviderTest(unittest.TestCase):
             self.assertEqual(str(db_path), payload["dbPath"])
             self.assertEqual("Biome formatter", payload["query"])
 
-    def test_on_memory_write_mirrors_explicit_memory_to_cli(self) -> None:
+    def test_on_memory_write_mirrors_builtin_memory_write_to_cli(self) -> None:
         completed = subprocess.CompletedProcess(
             args=["meta-memory", "remember"],
             returncode=0,
@@ -194,16 +218,24 @@ class MetaMemoryProviderTest(unittest.TestCase):
             provider = meta_memory.MetaMemoryProvider()
 
         with patch.object(meta_memory.subprocess, "run", return_value=completed) as run:
-            result = provider.on_memory_write("Remember the adapter boundary.", source="hermes")
+            result = provider.on_memory_write(
+                "add",
+                "memory",
+                "Remember the adapter boundary.",
+                metadata={"source": "hermes"},
+            )
 
-        self.assertEqual({"event": {"id": "event_1"}}, result)
+        self.assertIsNone(result)
         self.assertEqual(["meta-memory", "remember"], run.call_args.args[0])
 
         payload = json.loads(run.call_args.kwargs["input"])
         self.assertEqual(":memory:", payload["dbPath"])
         self.assertEqual("explicit_memory", payload["kind"])
         self.assertEqual("Remember the adapter boundary.", payload["content"])
-        self.assertEqual({"source": "hermes"}, payload["metadata"])
+        self.assertEqual(
+            {"action": "add", "target": "memory", "source": "hermes"},
+            payload["metadata"],
+        )
 
     def test_prefetch_delegates_to_context_pack(self) -> None:
         context_pack = {"query": "Biome", "items": []}
@@ -241,7 +273,12 @@ class MetaMemoryProviderTest(unittest.TestCase):
             patch.object(meta_memory.threading, "Thread", ImmediateThread),
             patch.object(meta_memory.subprocess, "run", return_value=completed) as run,
         ):
-            provider.sync_turn("user text", "assistant text")
+            provider.sync_turn(
+                "user text",
+                "assistant text",
+                session_id="session-1",
+                messages=[],
+            )
 
         self.assertEqual(2, run.call_count)
         payloads = [json.loads(call.kwargs["input"]) for call in run.call_args_list]
@@ -252,12 +289,22 @@ class MetaMemoryProviderTest(unittest.TestCase):
                     "kind": "user_message",
                     "actor": "user",
                     "content": "user text",
+                    "metadata": {
+                        "session_id": "session-1",
+                        "message_count": 0,
+                        "platform": "",
+                    },
                 },
                 {
                     "dbPath": ":memory:",
                     "kind": "assistant_message",
                     "actor": "assistant",
                     "content": "assistant text",
+                    "metadata": {
+                        "session_id": "session-1",
+                        "message_count": 0,
+                        "platform": "",
+                    },
                 },
             ],
             payloads,
@@ -305,8 +352,10 @@ class MetaMemoryProviderTest(unittest.TestCase):
             provider = meta_memory.initialize(session_id="session-123")
 
             with patch.object(meta_memory.subprocess, "run") as run:
-                self.assertIsNone(provider.on_session_end(session_id="session-123"))
-                self.assertIsNone(meta_memory.on_session_end(session_id="session-123"))
+                self.assertIsNone(provider.on_session_end([{"role": "user", "content": "hi"}]))
+                self.assertIsNone(
+                    meta_memory.on_session_end([{"role": "user", "content": "hi"}])
+                )
 
         run.assert_not_called()
 

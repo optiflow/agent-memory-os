@@ -144,6 +144,101 @@ const writeReadSeed: BenchmarkSeed = {
   ],
 };
 
+const sessionStateSeed: BenchmarkSeed = {
+  coreBlocks: [
+    {
+      id: "core_task_state_rule",
+      label: "Task state rule",
+      content: "Active session state should stay compact and cited.",
+      authority: 90,
+      readOnly: false,
+      updatedAt: timestamp,
+    },
+  ],
+  evidenceEvents: [
+    {
+      id: "event_session_state_update",
+      kind: "system_event",
+      actor: "system",
+      content: "Session state was updated for the current V1.1 implementation task.",
+      timestamp,
+      scope: workspaceScope,
+    },
+  ],
+  semanticFacts: [],
+  sessionStates: [
+    {
+      id: "session_v1_1",
+      scope: workspaceScope,
+      status: "active",
+      currentGoal: "Implement V1.1 active session state and workspace resources.",
+      summary: "The active task is scoped to local-first V1.1 projections.",
+      workingSet: ["packages/core", "packages/sqlite", "packages/cli"],
+      updatedAt: timestamp,
+      sourceEventIds: ["event_session_state_update"],
+    },
+  ],
+  workspaceResources: [
+    {
+      uri: "repo://docs/unrelated-resource.md",
+      scope: workspaceScope,
+      kind: "doc",
+      title: "Unrelated resource",
+      content: "This resource should not appear in task-only context.",
+      updatedAt: timestamp,
+      sourceEventIds: ["event_session_state_update"],
+    },
+  ],
+};
+
+const workspaceResourceSeed: BenchmarkSeed = {
+  coreBlocks: [
+    {
+      id: "core_workspace_tree_rule",
+      label: "Workspace tree rule",
+      content: "Workspace resources should be browseable and inspectable.",
+      authority: 90,
+      readOnly: false,
+      updatedAt: timestamp,
+    },
+  ],
+  evidenceEvents: [
+    {
+      id: "event_workspace_resource_update",
+      kind: "system_event",
+      actor: "system",
+      content: "Workspace resource repo://docs/v1-v2-roadmap.md was indexed.",
+      timestamp,
+      scope: workspaceScope,
+    },
+  ],
+  semanticFacts: [],
+  sessionStates: [
+    {
+      id: "session_unrelated",
+      scope: workspaceScope,
+      status: "active",
+      currentGoal: "Draft an unrelated task summary.",
+      summary: "This session state should not appear in workspace-only context.",
+      workingSet: [],
+      updatedAt: timestamp,
+      sourceEventIds: ["event_workspace_resource_update"],
+    },
+  ],
+  workspaceResources: [
+    {
+      uri: "repo://docs/v1-v2-roadmap.md",
+      parentUri: "repo://docs",
+      scope: workspaceScope,
+      kind: "doc",
+      title: "V1/V2 roadmap",
+      content: "The roadmap describes browseable workspace resource memory.",
+      updatedAt: timestamp,
+      sourceEventIds: ["event_workspace_resource_update"],
+    },
+  ],
+};
+
 export const benchmarkCases: BenchmarkCase[] = [
   {
     id: "conversation-preferences",
@@ -174,5 +269,27 @@ export const benchmarkCases: BenchmarkCase[] = [
     expectedItemIds: ["core_context7_rule", "event_context7_docs", "fact_context7_docs"],
     rejectedItemIds: ["event_write_read_unrelated"],
     seed: writeReadSeed,
+  },
+  {
+    id: "active-session-state",
+    track: "session_state",
+    title: "Task policy injects compact active session state",
+    query: "current V1.1 implementation task active session state",
+    policy: "task",
+    budgetTokens: 420,
+    expectedItemIds: ["session_v1_1"],
+    rejectedItemIds: ["repo://docs/unrelated-resource.md"],
+    seed: sessionStateSeed,
+  },
+  {
+    id: "workspace-resource-recall",
+    track: "workspace_resource",
+    title: "Workspace policy recalls browseable resource memory",
+    query: "browseable workspace resource roadmap",
+    policy: "workspace",
+    budgetTokens: 420,
+    expectedItemIds: ["repo://docs/v1-v2-roadmap.md"],
+    rejectedItemIds: ["session_unrelated"],
+    seed: workspaceResourceSeed,
   },
 ];

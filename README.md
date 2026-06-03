@@ -3,7 +3,7 @@
 Agent Memory OS is a local-first memory framework for Hermes coding agents. It
 keeps one Hermes-facing provider at the boundary while using several auditable
 internal memory views behind it: evidence, durable facts, search results,
-context packs, and verification records.
+active task state, workspace resources, context packs, and verification records.
 
 The core idea is simple:
 
@@ -13,7 +13,8 @@ The core idea is simple:
 
 This repo is a TypeScript-first v1 scaffold for building a safer coding-agent
 memory layer. It treats append-only evidence as the source of truth, then derives
-searchable facts and bounded context packs from that evidence.
+searchable facts, compact session state, workspace resources, and bounded
+context packs from that evidence.
 
 The Python code exists only where Hermes needs a Python memory provider. Storage,
 ranking, routing, schemas, context packing, verification policy, tests, and the
@@ -23,7 +24,7 @@ CLI live in TypeScript packages.
 
 The local scaffold is implemented and testable. It includes a real SQLite/FTS
 store, TypeScript domain model, JSON stdin/stdout CLI, deterministic evals, and a
-thin Hermes adapter scaffold.
+thin Hermes adapter.
 
 The Hermes boundary is aligned to the current local plugin contract described by
 Hermes docs: `plugin.yaml` metadata, `register(ctx)` registration,
@@ -38,12 +39,15 @@ only. It does not claim a live production Hermes installation has been tested.
   and explicit memory writes.
 - Typed semantic facts with source event citations.
 - SQLite + FTS retrieval for local-first search.
+- Active session-state projection for compact current-task memory.
+- Browseable workspace resources with URI and parent links.
 - Deterministic context packs with token budgets and citations.
 - Verification records for `failed`, `passed`, `stale`, `unknown`, and
-  `warning` statuses.
+  `warning` statuses, including latest warnings in context packs.
 - A `meta-memory` CLI bridge with `seed-sample`, `remember`, `search`,
-  `context-pack`, and `verify` commands.
-- Adapter-boundary Python checks and local smoke proof for the Hermes scaffold.
+  `context-pack`, `upsert-session-state`, `upsert-resource`,
+  `browse-resources`, and `verify` commands.
+- Adapter-boundary Python checks and local smoke proof for the Hermes contract.
 
 ## What Is Out Of V1
 
@@ -83,7 +87,8 @@ echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"bud
 
 Expected result:
 
-- `seed-sample` returns sample core, evidence, and fact records.
+- `seed-sample` returns sample core, evidence, fact, session-state, and
+  workspace-resource records.
 - `context-pack` returns a bounded `contextPack`.
 - The returned context pack includes the seeded Biome memory with citations.
 
@@ -93,7 +98,7 @@ Expected result:
 packages/core      Domain types, context router, packer, verification policy
 packages/sqlite    SQLite schema, migrations, FTS search, local store
 packages/cli       JSON CLI bridge for Hermes and future adapters
-adapters/hermes    Thin Python Hermes plugin contract scaffold
+adapters/hermes    Thin Python Hermes plugin contract bridge
 docs               Architecture, roadmap, evaluation, and install notes
 ```
 
@@ -108,10 +113,14 @@ echo '{"dbPath":":memory:","query":"formatter preference","budgetTokens":400}' \
 
 Current commands:
 
-- `seed-sample`: create sample core, evidence, and fact records.
+- `seed-sample`: create sample core, evidence, fact, session-state, and
+  workspace-resource records.
 - `remember`: append an evidence event.
-- `search`: search evidence and facts with SQLite FTS.
+- `search`: search evidence, facts, session state, and resources with SQLite FTS.
 - `context-pack`: build a bounded context pack for injection or inspection.
+- `upsert-session-state`: update compact current-task memory.
+- `upsert-resource`: add or update a workspace resource.
+- `browse-resources`: list workspace resources under an optional parent URI.
 - `verify`: record verification status for a memory item.
 
 See [docs/cli-reference.md](docs/cli-reference.md) for request and response
@@ -139,8 +148,8 @@ Coding-agent operating instructions live in [AGENTS.md](AGENTS.md).
 Phase 0 aligns the Hermes adapter contract to `plugin.yaml`, `register(ctx)`,
 `initialize(...)` bridge setup, lifecycle hooks, tool schemas, and local smoke
 proof. Phase 1 keeps the local evidence ledger, facts, FTS retrieval, context
-packs, verification records, CLI, and adapter auditable. Phase 1.1 may add
-active session state and workspace tree projections without graph, vector,
-cloud, or LLM dependencies. Phase 2+ is where temporal recall, contradiction
-handling, reflection, handoff packets, connector sync, and shared memory belong
-after the local system is proven.
+packs, verification records, CLI, and adapter auditable. Phase 1.1 adds active
+session state, workspace resources, and local router policies without graph,
+vector, cloud, or LLM dependencies. Phase 2+ is where temporal recall,
+contradiction handling, reflection, handoff packets, connector sync, and shared
+memory belong after the local system is proven.

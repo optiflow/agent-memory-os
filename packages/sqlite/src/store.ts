@@ -7,7 +7,9 @@ import type {
   Metadata,
   SearchResult,
   SemanticFact,
+  SessionState,
   VerificationRecord,
+  WorkspaceResource,
 } from "@agent-memory-os/core";
 import { SCHEMA_SQL } from "./migrations.js";
 
@@ -23,8 +25,36 @@ function metadataFromJson(value: unknown): Metadata {
   return JSON.parse(value) as Metadata;
 }
 
+function stringArrayFromJson(value: unknown): string[] {
+  if (typeof value !== "string" || value.length === 0) {
+    return [];
+  }
+
+  const parsed = JSON.parse(value) as unknown;
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed.filter((item): item is string => typeof item === "string");
+}
+
 function textValue(row: Record<string, unknown>, key: string): string {
   const value = row[key];
+
+  if (typeof value !== "string") {
+    throw new TypeError(`Expected ${key} to be a string`);
+  }
+
+  return value;
+}
+
+function optionalTextValue(row: Record<string, unknown>, key: string): string | undefined {
+  const value = row[key];
+
+  if (value === null || value === undefined) {
+    return undefined;
+  }
 
   if (typeof value !== "string") {
     throw new TypeError(`Expected ${key} to be a string`);
@@ -59,6 +89,19 @@ function normalizeLimit(limit: number): number {
   }
 
   return Math.floor(limit);
+}
+
+function scopeClause(scope?: MemoryScope, tableAlias?: string): string {
+  if (!scope) {
+    return "";
+  }
+
+  const prefix = tableAlias ? `${tableAlias}.` : "";
+  return ` AND ${prefix}scope_type = ? AND ${prefix}scope_id = ?`;
+}
+
+function scopeValues(scope?: MemoryScope): string[] {
+  return scope ? [scope.type, scope.id] : [];
 }
 
 export class SQLiteMemoryStore implements MemoryStore {
@@ -174,7 +217,140 @@ export class SQLiteMemoryStore implements MemoryStore {
     }));
   }
 
-  async search(query: string, limit = 10): Promise<SearchResult[]> {
+  async upsertSessionState(state: SessionState): Promise<SessionState> {
+    this.database
+      .prepare(
+        `INSERT INTO session_states (
+          id, scope_type, scope_id, status, current_goal, summary,
+          working_set_json, updated_at, source_event_ids_json, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(scope_type, scope_id, id) DO UPDATE SET
+          status = excluded.status,
+          current_goal = excluded.current_goal,
+          summary = excluded.summary,
+          working_set_json = excluded.working_set_json,
+          updated_at = excluded.updated_at,
+          source_event_ids_json = excluded.source_event_ids_json,
+          metadata_json = excluded.metadata_json`,
+      )
+      .run(
+        state.id,
+        state.scope.type,
+        state.scope.id,
+        state.status,
+        state.currentGoal,
+        state.summary,
+        JSON.stringify(state.workingSet),
+        state.updatedAt,
+        JSON.stringify(state.sourceEventIds),
+        metadataToJson(state.metadata),
+      );
+    this.database
+      .prepare("DELETE FROM session_state_fts WHERE id = ? AND scope_type = ? AND scope_id = ?")
+      .run(state.id, state.scope.type, state.scope.id);
+    this.database
+      .prepare(
+        "INSERT INTO session_state_fts (id, scope_type, scope_id, content, metadata) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(
+        state.id,
+        state.scope.type,
+        state.scope.id,
+        `${state.currentGoal} ${state.status} ${state.summary} ${state.workingSet.join(" ")}`,
+        metadataToJson(state.metadata),
+      );
+
+    return state;
+  }
+
+  async getActiveSessionStates(scope?: MemoryScope): Promise<SessionState[]> {
+    const rows = this.database
+      .prepare(
+        `SELECT id, scope_type, scope_id, status, current_goal, summary, working_set_json,
+          updated_at, source_event_ids_json, metadata_json
+         FROM session_states
+         WHERE status = 'active'${scopeClause(scope)}
+         ORDER BY updated_at DESC, id ASC`,
+      )
+      .all(...scopeValues(scope));
+
+    return rows.map(sessionStateFromRow);
+  }
+
+  async upsertWorkspaceResource(resource: WorkspaceResource): Promise<WorkspaceResource> {
+    this.database
+      .prepare(
+        `INSERT INTO workspace_resources (
+          uri, scope_type, scope_id, kind, title, content, parent_uri,
+          updated_at, source_event_ids_json, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(scope_type, scope_id, uri) DO UPDATE SET
+          kind = excluded.kind,
+          title = excluded.title,
+          content = excluded.content,
+          parent_uri = excluded.parent_uri,
+          updated_at = excluded.updated_at,
+          source_event_ids_json = excluded.source_event_ids_json,
+          metadata_json = excluded.metadata_json`,
+      )
+      .run(
+        resource.uri,
+        resource.scope.type,
+        resource.scope.id,
+        resource.kind,
+        resource.title,
+        resource.content,
+        resource.parentUri ?? null,
+        resource.updatedAt,
+        JSON.stringify(resource.sourceEventIds),
+        metadataToJson(resource.metadata),
+      );
+    this.database
+      .prepare(
+        "DELETE FROM workspace_resource_fts WHERE uri = ? AND scope_type = ? AND scope_id = ?",
+      )
+      .run(resource.uri, resource.scope.type, resource.scope.id);
+    this.database
+      .prepare(
+        "INSERT INTO workspace_resource_fts (uri, scope_type, scope_id, content, metadata) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(
+        resource.uri,
+        resource.scope.type,
+        resource.scope.id,
+        `${resource.uri} ${resource.kind} ${resource.title} ${resource.content}`,
+        metadataToJson(resource.metadata),
+      );
+
+    return resource;
+  }
+
+  async listWorkspaceResources(
+    options: { scope?: MemoryScope; parentUri?: string; limit?: number } = {},
+  ): Promise<WorkspaceResource[]> {
+    const normalizedLimit = normalizeLimit(options.limit ?? 50);
+
+    if (normalizedLimit === 0) {
+      return [];
+    }
+
+    const parentClause = options.parentUri === undefined ? "parent_uri IS NULL" : "parent_uri = ?";
+    const parentValues = options.parentUri === undefined ? [] : [options.parentUri];
+    const rows = this.database
+      .prepare(
+        `SELECT uri, scope_type, scope_id, kind, title, content, parent_uri,
+          updated_at, source_event_ids_json, metadata_json
+         FROM workspace_resources
+         WHERE ${parentClause}${scopeClause(options.scope)}
+         ORDER BY title ASC, uri ASC
+         LIMIT ?`,
+      )
+      .all(...parentValues, ...scopeValues(options.scope), normalizedLimit);
+
+    return rows.map(workspaceResourceFromRow);
+  }
+
+  async search(query: string, limit = 10, scope?: MemoryScope): Promise<SearchResult[]> {
     const normalizedLimit = normalizeLimit(limit);
 
     if (normalizedLimit === 0) {
@@ -193,11 +369,11 @@ export class SQLiteMemoryStore implements MemoryStore {
           evidence_events.timestamp, evidence_events.metadata_json, bm25(evidence_fts) AS rank
          FROM evidence_fts
          JOIN evidence_events ON evidence_events.id = evidence_fts.id
-         WHERE evidence_fts MATCH ?
+         WHERE evidence_fts MATCH ?${scopeClause(scope, "evidence_events")}
          ORDER BY rank ASC
          LIMIT ?`,
       )
-      .all(ftsQuery, normalizedLimit);
+      .all(ftsQuery, ...scopeValues(scope), normalizedLimit);
     const factRows = this.database
       .prepare(
         `SELECT semantic_facts.id, semantic_facts.subject, semantic_facts.predicate,
@@ -210,6 +386,34 @@ export class SQLiteMemoryStore implements MemoryStore {
          LIMIT ?`,
       )
       .all(ftsQuery, normalizedLimit);
+    const sessionRows = this.database
+      .prepare(
+        `SELECT session_states.id, session_states.status, session_states.current_goal,
+          session_states.summary, session_states.working_set_json, session_states.updated_at,
+          session_states.metadata_json, bm25(session_state_fts) AS rank
+         FROM session_state_fts
+         JOIN session_states ON session_states.id = session_state_fts.id
+          AND session_states.scope_type = session_state_fts.scope_type
+          AND session_states.scope_id = session_state_fts.scope_id
+         WHERE session_state_fts MATCH ?${scopeClause(scope, "session_states")}
+         ORDER BY rank ASC
+         LIMIT ?`,
+      )
+      .all(ftsQuery, ...scopeValues(scope), normalizedLimit);
+    const resourceRows = this.database
+      .prepare(
+        `SELECT workspace_resources.uri, workspace_resources.kind, workspace_resources.title,
+          workspace_resources.content, workspace_resources.updated_at,
+          workspace_resources.metadata_json, bm25(workspace_resource_fts) AS rank
+         FROM workspace_resource_fts
+         JOIN workspace_resources ON workspace_resources.uri = workspace_resource_fts.uri
+          AND workspace_resources.scope_type = workspace_resource_fts.scope_type
+          AND workspace_resources.scope_id = workspace_resource_fts.scope_id
+         WHERE workspace_resource_fts MATCH ?${scopeClause(scope, "workspace_resources")}
+         ORDER BY rank ASC
+         LIMIT ?`,
+      )
+      .all(ftsQuery, ...scopeValues(scope), normalizedLimit);
 
     return [
       ...evidenceRows.map((row) => ({
@@ -233,6 +437,32 @@ export class SQLiteMemoryStore implements MemoryStore {
           metadata: metadataFromJson(row.metadata_json),
         };
       }),
+      ...sessionRows.map((row) => ({
+        id: textValue(row, "id"),
+        kind: "session" as const,
+        content: `Current goal: ${textValue(row, "current_goal")}\nStatus: ${textValue(
+          row,
+          "status",
+        )}\nSummary: ${textValue(row, "summary")}\nWorking set: ${stringArrayFromJson(
+          row.working_set_json,
+        ).join(", ")}`,
+        score: sqliteRankToScore(numberValue(row, "rank")),
+        citation: `session:${textValue(row, "id")}`,
+        timestamp: textValue(row, "updated_at"),
+        metadata: metadataFromJson(row.metadata_json),
+      })),
+      ...resourceRows.map((row) => ({
+        id: textValue(row, "uri"),
+        kind: "resource" as const,
+        content: `${textValue(row, "title")} (${textValue(row, "kind")}): ${textValue(
+          row,
+          "content",
+        )}`,
+        score: sqliteRankToScore(numberValue(row, "rank")),
+        citation: `resource:${textValue(row, "uri")}`,
+        timestamp: textValue(row, "updated_at"),
+        metadata: metadataFromJson(row.metadata_json),
+      })),
     ]
       .slice()
       .sort((left, right) => right.score - left.score)
@@ -257,8 +487,75 @@ export class SQLiteMemoryStore implements MemoryStore {
 
     return record;
   }
+
+  async getVerificationWarnings(targetIds: string[]): Promise<VerificationRecord[]> {
+    if (targetIds.length === 0) {
+      return [];
+    }
+
+    const placeholders = targetIds.map(() => "?").join(", ");
+    const rows = this.database
+      .prepare(
+        `SELECT records.id, records.target_id, records.status, records.checked_at,
+          records.message, records.metadata_json
+         FROM verification_records records
+         JOIN (
+           SELECT target_id, MAX(checked_at) AS checked_at
+           FROM verification_records
+           WHERE target_id IN (${placeholders})
+           GROUP BY target_id
+         ) latest ON latest.target_id = records.target_id
+          AND latest.checked_at = records.checked_at
+         WHERE records.status IN ('failed', 'stale', 'unknown', 'warning')
+         ORDER BY records.checked_at DESC, records.id ASC`,
+      )
+      .all(...targetIds);
+
+    return rows.map((row) => ({
+      id: textValue(row, "id"),
+      targetId: textValue(row, "target_id"),
+      status: textValue(row, "status") as VerificationRecord["status"],
+      checkedAt: textValue(row, "checked_at"),
+      message: textValue(row, "message"),
+      metadata: metadataFromJson(row.metadata_json),
+    }));
+  }
 }
 
 function sqliteRankToScore(rank: number): number {
   return 1 / (1 + Math.abs(rank));
+}
+
+function sessionStateFromRow(row: Record<string, unknown>): SessionState {
+  return {
+    id: textValue(row, "id"),
+    scope: {
+      type: textValue(row, "scope_type") as SessionState["scope"]["type"],
+      id: textValue(row, "scope_id"),
+    },
+    status: textValue(row, "status") as SessionState["status"],
+    currentGoal: textValue(row, "current_goal"),
+    summary: textValue(row, "summary"),
+    workingSet: stringArrayFromJson(row.working_set_json),
+    updatedAt: textValue(row, "updated_at"),
+    sourceEventIds: stringArrayFromJson(row.source_event_ids_json),
+    metadata: metadataFromJson(row.metadata_json),
+  };
+}
+
+function workspaceResourceFromRow(row: Record<string, unknown>): WorkspaceResource {
+  return {
+    uri: textValue(row, "uri"),
+    scope: {
+      type: textValue(row, "scope_type") as WorkspaceResource["scope"]["type"],
+      id: textValue(row, "scope_id"),
+    },
+    kind: textValue(row, "kind") as WorkspaceResource["kind"],
+    title: textValue(row, "title"),
+    content: textValue(row, "content"),
+    parentUri: optionalTextValue(row, "parent_uri"),
+    updatedAt: textValue(row, "updated_at"),
+    sourceEventIds: stringArrayFromJson(row.source_event_ids_json),
+    metadata: metadataFromJson(row.metadata_json),
+  };
 }

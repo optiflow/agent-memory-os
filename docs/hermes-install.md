@@ -76,7 +76,8 @@ echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"bud
   | node packages/cli/dist/index.js context-pack
 ```
 
-The context-pack output should include `contextPack` and the seeded Biome memory.
+The context-pack output should include `contextPack`, the seeded Biome memory,
+sample session state, and sample workspace resource records.
 
 This proves the adapter can compile, call the TypeScript CLI, and use the
 configured SQLite path locally. It does not prove Hermes plugin discovery or
@@ -85,7 +86,8 @@ runtime hook execution.
 ## Notes
 
 - This repo is designed to act as the single Hermes-facing meta-memory boundary.
-- The adapter returns JSON context packs with citations.
+- The adapter returns JSON context packs and tool results with citations where
+  relevant.
 - `META_MEMORY_DB` controls the local SQLite database path.
 - The adapter creates the parent directory for file-backed `META_MEMORY_DB` paths.
 - Tool-call arguments cannot override the configured database path.

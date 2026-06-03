@@ -48,4 +48,38 @@ CREATE TABLE IF NOT EXISTS verification_records (
   message TEXT NOT NULL,
   metadata_json TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS session_states (
+  id TEXT NOT NULL,
+  scope_type TEXT NOT NULL,
+  scope_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  current_goal TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  working_set_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  source_event_ids_json TEXT NOT NULL,
+  metadata_json TEXT NOT NULL,
+  PRIMARY KEY (scope_type, scope_id, id)
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS session_state_fts
+USING fts5(id UNINDEXED, scope_type UNINDEXED, scope_id UNINDEXED, content, metadata);
+
+CREATE TABLE IF NOT EXISTS workspace_resources (
+  uri TEXT NOT NULL,
+  scope_type TEXT NOT NULL,
+  scope_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  parent_uri TEXT,
+  updated_at TEXT NOT NULL,
+  source_event_ids_json TEXT NOT NULL,
+  metadata_json TEXT NOT NULL,
+  PRIMARY KEY (scope_type, scope_id, uri)
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS workspace_resource_fts
+USING fts5(uri UNINDEXED, scope_type UNINDEXED, scope_id UNINDEXED, content, metadata);
 `;

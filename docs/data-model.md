@@ -82,9 +82,33 @@ fixtures only.
 - `unknown`
 - `warning`
 
-V1 records warnings and status. It does not yet retrieve verification records
-for context-pack population, validate citations against live workspace state, or
-check branches.
+V1.1 retrieves the latest record for packed item IDs and includes non-passed
+statuses in `ContextPack.verificationWarnings`. It does not validate citations
+against live workspace state or check branches.
+
+## Session State
+
+`SessionState` is the compact current-task projection. It stores:
+
+- `status`: `active`, `blocked`, or `complete`.
+- `currentGoal`: the immediate task.
+- `summary`: bounded task state.
+- `workingSet`: relevant files, modules, or resources.
+- `sourceEventIds`: evidence that supports the projection.
+
+The CLI creates an audit evidence event before session-state projection writes.
+Only `active` session states are automatically considered by the context router.
+
+## Workspace Resources
+
+`WorkspaceResource` is the browseable workspace/resource projection. It stores
+URI-addressed resources with a title, kind, content, optional `parentUri`, scope,
+source event IDs, and metadata.
+
+Resources are keyed by scope plus URI so similarly named project and workspace
+resources do not collide. The resource tree is local SQLite + FTS only; it does
+not introduce connector sync, a vector database, graph database, or cloud
+provider.
 
 ## Context Packs
 
@@ -93,12 +117,21 @@ check branches.
 - `query`: user or adapter query.
 - `budgetTokens`: requested budget.
 - `estimatedTokens`: pack estimate.
-- `items`: core, evidence, or fact items ranked by TypeScript store/router logic
-  with citations.
-- `verificationWarnings`: warning records when a future router populates them;
-  the current router returns an empty list.
+- `items`: core, evidence, fact, session, or resource items ranked by TypeScript
+  store/router logic with citations.
+- `verificationWarnings`: latest failed, stale, unknown, or warning records for
+  items included in the pack.
 
 Context packs should be bounded, cited, and inspectable.
+
+The router supports three local policies:
+
+- `auto`: include core memory, active session state, search results, and
+  workspace resources.
+- `task`: include core memory and active session state while excluding resource
+  search results.
+- `workspace`: include core memory and resource search results while excluding
+  active session state.
 
 ## SQLite Tables
 
@@ -108,6 +141,8 @@ The current SQLite projection stores:
 - `evidence_events` plus `evidence_fts`
 - `semantic_facts` plus `fact_fts`
 - `verification_records`
+- `session_states` plus `session_state_fts`
+- `workspace_resources` plus `workspace_resource_fts`
 
 SQLite is the v1 storage boundary. Do not add a vector DB, graph DB, or cloud
 memory provider during v1 prep.

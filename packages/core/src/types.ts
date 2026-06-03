@@ -50,7 +50,35 @@ export interface SemanticFact {
   metadata?: Metadata;
 }
 
-export type SearchResultKind = "core" | "evidence" | "fact";
+export type SessionStateStatus = "active" | "blocked" | "complete";
+
+export interface SessionState {
+  id: string;
+  scope: MemoryScope;
+  status: SessionStateStatus;
+  currentGoal: string;
+  summary: string;
+  workingSet: string[];
+  updatedAt: string;
+  sourceEventIds: string[];
+  metadata?: Metadata;
+}
+
+export type WorkspaceResourceKind = "doc" | "file" | "note" | "other" | "url";
+
+export interface WorkspaceResource {
+  uri: string;
+  scope: MemoryScope;
+  kind: WorkspaceResourceKind;
+  title: string;
+  content: string;
+  parentUri?: string;
+  updatedAt: string;
+  sourceEventIds: string[];
+  metadata?: Metadata;
+}
+
+export type SearchResultKind = "core" | "evidence" | "fact" | "resource" | "session";
 
 export interface SearchResult {
   id: string;
@@ -97,19 +125,31 @@ export interface ContextPackOptions {
   maxResults?: number;
 }
 
+export type ContextRouterPolicy = "auto" | "task" | "workspace";
+
 export interface ContextRouterRequest {
   query: string;
   scope?: MemoryScope;
   budgetTokens?: number;
+  policy?: ContextRouterPolicy;
 }
 
 export interface MemoryStore {
   addSemanticFact(fact: SemanticFact): Promise<SemanticFact>;
   appendEvidence(event: EvidenceEvent): Promise<EvidenceEvent>;
+  getActiveSessionStates(scope?: MemoryScope): Promise<SessionState[]>;
   getCoreBlocks(scope?: MemoryScope): Promise<CoreMemoryBlock[]>;
+  getVerificationWarnings(targetIds: string[]): Promise<VerificationRecord[]>;
+  listWorkspaceResources(options?: {
+    scope?: MemoryScope;
+    parentUri?: string;
+    limit?: number;
+  }): Promise<WorkspaceResource[]>;
   recordVerification(record: VerificationRecord): Promise<VerificationRecord>;
-  search(query: string, limit?: number): Promise<SearchResult[]>;
+  search(query: string, limit?: number, scope?: MemoryScope): Promise<SearchResult[]>;
   upsertCoreBlock(block: CoreMemoryBlock): Promise<CoreMemoryBlock>;
+  upsertSessionState(state: SessionState): Promise<SessionState>;
+  upsertWorkspaceResource(resource: WorkspaceResource): Promise<WorkspaceResource>;
 }
 
 export interface ContextRouter {

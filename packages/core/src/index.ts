@@ -5,6 +5,7 @@ export type {
   ContextPackItem,
   ContextPackOptions,
   ContextRouter,
+  ContextRouterPolicy,
   ContextRouterRequest,
   CoreMemoryBlock,
   EvidenceEvent,
@@ -17,8 +18,12 @@ export type {
   SearchResult,
   SearchResultKind,
   SemanticFact,
+  SessionState,
+  SessionStateStatus,
   TemporalRelation,
   VerificationRecord,
   VerificationStatus,
+  WorkspaceResource,
+  WorkspaceResourceKind,
 } from "./types.js";
 export { createVerificationRecord, needsVerification } from "./verification.js";

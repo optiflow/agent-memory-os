@@ -11,7 +11,7 @@ import type {
   BenchmarkReport,
 } from "./types.js";
 
-const CITATION_PATTERN = /^(core|event|fact):\S+$/;
+const CITATION_PATTERN = /^(core|event|fact|resource|session):\S+$/;
 const DEFAULT_REPORT_PATH = fileURLToPath(new URL("../reports/eval.json", import.meta.url));
 
 function ratio(numerator: number, denominator: number): number {
@@ -48,6 +48,14 @@ export async function seedBenchmarkCase(
 
   for (const fact of benchmarkCase.seed.semanticFacts) {
     await store.addSemanticFact(fact);
+  }
+
+  for (const state of benchmarkCase.seed.sessionStates ?? []) {
+    await store.upsertSessionState(state);
+  }
+
+  for (const resource of benchmarkCase.seed.workspaceResources ?? []) {
+    await store.upsertWorkspaceResource(resource);
   }
 }
 
@@ -127,6 +135,7 @@ export async function runBenchmarkCase(benchmarkCase: BenchmarkCase): Promise<Be
     const contextPack = await router.pack({
       query: benchmarkCase.query,
       budgetTokens: benchmarkCase.budgetTokens,
+      policy: benchmarkCase.policy,
     });
     const contextPackLatencyMs = performance.now() - startedAt;
 

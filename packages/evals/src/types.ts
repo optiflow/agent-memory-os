@@ -3,14 +3,23 @@ import type {
   CoreMemoryBlock,
   EvidenceEvent,
   SemanticFact,
+  SessionState,
+  WorkspaceResource,
 } from "@agent-memory-os/core";
 
-export type BenchmarkTrack = "conversation" | "environment" | "write_read";
+export type BenchmarkTrack =
+  | "conversation"
+  | "environment"
+  | "session_state"
+  | "workspace_resource"
+  | "write_read";
 
 export interface BenchmarkSeed {
   coreBlocks: CoreMemoryBlock[];
   evidenceEvents: EvidenceEvent[];
   semanticFacts: SemanticFact[];
+  sessionStates?: SessionState[];
+  workspaceResources?: WorkspaceResource[];
 }
 
 export interface BenchmarkCase {
@@ -18,6 +27,7 @@ export interface BenchmarkCase {
   track: BenchmarkTrack;
   title: string;
   query: string;
+  policy?: "auto" | "task" | "workspace";
   budgetTokens: number;
   expectedItemIds: string[];
   rejectedItemIds: string[];

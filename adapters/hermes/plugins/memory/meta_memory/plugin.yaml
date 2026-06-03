@@ -6,6 +6,9 @@ provides_tools:
   - context_pack
   - remember
   - search
+  - upsert_session_state
+  - upsert_resource
+  - browse_resources
   - verify
 provides_hooks:
   - on_session_end

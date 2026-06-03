@@ -33,8 +33,8 @@ Use these as design patterns, not dependencies:
 | Always-visible memory | Hermes built-in memory, Letta, Memory-OS | Current v1 discipline: keep core memory explicit and high-authority. |
 | Evidence capture | Memori, RetainDB, Graphiti episodes | Current v1 discipline: preserve append-only raw events. |
 | Typed facts and profiles | Mem0, RetainDB, Supermemory | Current v1 discipline: keep facts typed, cited, and separate from evidence. |
-| Active task state | TencentDB-Agent-Memory | Future v1 design: compact current-task projection. |
-| Workspace tree | OpenViking, ByteRover | Future v1 design: browseable project memory without graph/cloud dependencies. |
+| Active task state | TencentDB-Agent-Memory | Current V1.1 design: compact current-task projection. |
+| Workspace tree | OpenViking, ByteRover | Current V1.1 design: browseable project memory without graph/cloud dependencies. |
 | Temporal graph | Graphiti, Hindsight | V2 design: validity windows, supersession, contradiction handling, and reflection. |
 | Social memory | Honcho | V3 design: optional peer and identity modeling. |
 
@@ -45,8 +45,8 @@ Use these as design patterns, not dependencies:
    runtime verification remains a separate target-version check.
 2. Phase 1 keeps the local evidence ledger, facts, FTS, context packs,
    verification records, CLI, and adapter auditable.
-3. Phase 1.1 designs active session state and workspace tree projections without
-   adding graph, vector, cloud, connector, or LLM dependencies.
+3. Phase 1.1 implements active session state and workspace resource projections
+   without adding graph, vector, cloud, connector, or LLM dependencies.
 4. Phase 2 adds temporal recall, contradiction handling, optional reflection,
    and handoff packets.
 5. Phase 3 leaves social memory, connector sync, shared blocks, and federation

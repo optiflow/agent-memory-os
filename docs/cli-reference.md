@@ -74,6 +74,7 @@ Required:
 Optional:
 
 - `budgetTokens`: positive integer, defaults to `1200`.
+- `policy`: `auto`, `task`, or `workspace`; defaults to `auto`.
 - `scope`
 
 Returns:
@@ -98,9 +99,70 @@ Returns:
 
 - `{ "verification": VerificationRecord }`
 
+## `upsert-session-state`
+
+Create or update compact active task state. The CLI appends an audit evidence
+event before updating the projection.
+
+Required:
+
+- `id`: non-empty session-state identifier.
+- `currentGoal`: non-empty current goal.
+- `summary`: non-empty bounded task summary.
+
+Optional:
+
+- `status`: `active`, `blocked`, or `complete`; defaults to `active`.
+- `workingSet`: array of strings.
+- `scope`
+- `sourceEventIds`
+- `metadata`
+
+Returns:
+
+- `{ "event": EvidenceEvent, "sessionState": SessionState }`
+
+## `upsert-resource`
+
+Create or update a browseable workspace resource. The CLI appends an audit
+evidence event before updating the projection.
+
+Required:
+
+- `uri`: non-empty resource URI.
+- `title`: non-empty display title.
+- `content`: non-empty searchable content.
+
+Optional:
+
+- `kind`: `doc`, `file`, `note`, `other`, or `url`; defaults to `file`.
+- `parentUri`: non-empty parent resource URI.
+- `scope`
+- `sourceEventIds`
+- `metadata`
+
+Returns:
+
+- `{ "event": EvidenceEvent, "resource": WorkspaceResource }`
+
+## `browse-resources`
+
+List workspace resources under an optional parent URI.
+
+Optional:
+
+- `parentUri`: parent resource URI; omitted lists root resources.
+- `limit`: positive integer, defaults to `50`.
+- `scope`
+
+Returns:
+
+- `{ "resources": WorkspaceResource[] }`
+
 ## `seed-sample`
 
-Create sample core, evidence, and fact records for smoke testing.
+Create sample core, evidence, fact, session-state, and workspace-resource
+records for smoke testing.
 
 Optional:
 
@@ -109,7 +171,7 @@ Optional:
 
 Returns:
 
-- `{ "coreBlock": CoreMemoryBlock, "event": EvidenceEvent, "fact": SemanticFact }`
+- `{ "coreBlock": CoreMemoryBlock, "event": EvidenceEvent, "fact": SemanticFact, "sessionState": SessionState, "resource": WorkspaceResource }`
 
 ## Error Contract
 

@@ -10,14 +10,14 @@ systems as dependencies.
 | --- | --- | --- |
 | Hermes built-in memory | `MEMORY.md` and `USER.md` remain active | Current v1 L0 core memory alongside the external provider. |
 | Letta | Always-visible memory blocks | Current v1 discipline for pinned core memory. |
-| Memory-OS | Trust and injection policy | Current v1 discipline for cited, bounded injection; warning-aware injection is future work. |
+| Memory-OS | Trust and injection policy | Current v1/v1.1 discipline for cited, bounded injection and verification warnings. |
 | Memori | Attributed background capture | Current v1 evidence-ledger and event-attribution pattern. |
 | RetainDB | Scoped context and agent events | Current v1 context-routing pattern; V2 handoff pattern. |
 | Mem0 | Typed fact modeling and retrieval patterns | Current v1 semantic fact plane design. |
 | Supermemory | Profile and hybrid memory/RAG surfaces | Future profile-serving pattern. |
-| TencentDB-Agent-Memory | Compact symbolic session state | Future v1 active task-state projection. |
-| OpenViking | URI-like browseable memory/resource model | Future v1 workspace tree pattern. |
-| ByteRover | Local, versionable context tree | Future v1 inspectable project-memory pattern. |
+| TencentDB-Agent-Memory | Compact symbolic session state | Current V1.1 active task-state projection pattern. |
+| OpenViking | URI-like browseable memory/resource model | Current V1.1 workspace resource tree pattern. |
+| ByteRover | Local, versionable context tree | Current V1.1 inspectable project-memory pattern. |
 | Graphiti/Zep | Temporal graph with provenance | V2 relation graph and validity-window pattern. |
 | Hindsight | Reflection over stored evidence | V2 slow-path synthesis pattern. |
 | Honcho | Peer and identity reasoning | V3 social-memory sidecar pattern. |
@@ -32,6 +32,8 @@ V1 keeps the implementation simple:
 - SQLite + FTS;
 - append-only evidence;
 - typed facts;
+- active session state;
+- workspace resources;
 - context packs;
 - verification records;
 - no graph, vector, cloud, or LLM extraction dependency.
@@ -41,8 +43,7 @@ pattern becomes an implementation requirement.
 
 ## Future Mapping
 
-- Future v1 may design active session state and workspace tree projections, but
-  must stay local-first and dependency-light.
+- Future v1 additions must stay local-first and dependency-light.
 - V2 may add temporal graph, contradiction handling, reflection, and handoff
   packets when recall safety requires them.
 - V3 may add social memory, connector sync, shared memory blocks, and federation
