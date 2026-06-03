@@ -6,21 +6,21 @@ systems as dependencies.
 
 ## Donor Patterns
 
-| Source pattern | Useful component | Role in Agent Memory OS |
+| Source pattern | Useful component | Roadmap role |
 | --- | --- | --- |
-| Hermes built-in memory | `MEMORY.md` and `USER.md` remain active | L0 core memory alongside the external provider. |
-| Letta | Always-visible memory blocks | Pinned core memory discipline. |
-| Memory-OS | Trust and injection policy | Treat injected memory as cited, bounded, and warning-aware. |
-| Memori | Attributed background capture | Evidence ledger and event attribution. |
-| RetainDB | Scoped context and agent events | Context routing and future handoff patterns. |
-| TencentDB-Agent-Memory | Compact symbolic session state | Future active task-state projection. |
-| Mem0 | Typed fact modeling and retrieval patterns | Semantic fact plane design. |
+| Hermes built-in memory | `MEMORY.md` and `USER.md` remain active | Current v1 L0 core memory alongside the external provider. |
+| Letta | Always-visible memory blocks | Current v1 discipline for pinned core memory. |
+| Memory-OS | Trust and injection policy | Current v1 discipline for cited, bounded injection; warning-aware injection is future work. |
+| Memori | Attributed background capture | Current v1 evidence-ledger and event-attribution pattern. |
+| RetainDB | Scoped context and agent events | Current v1 context-routing pattern; V2 handoff pattern. |
+| Mem0 | Typed fact modeling and retrieval patterns | Current v1 semantic fact plane design. |
 | Supermemory | Profile and hybrid memory/RAG surfaces | Future profile-serving pattern. |
-| Graphiti/Zep | Temporal graph with provenance | V2 relation graph. |
-| Hindsight | Reflection over stored evidence | V2 slow-path synthesis. |
-| OpenViking | URI-like browseable memory/resource model | Future workspace tree. |
-| ByteRover | Local, versionable context tree | Future inspectable project memory. |
-| Honcho | Peer and identity reasoning | Optional V2+ social-memory sidecar. |
+| TencentDB-Agent-Memory | Compact symbolic session state | Future v1 active task-state projection. |
+| OpenViking | URI-like browseable memory/resource model | Future v1 workspace tree pattern. |
+| ByteRover | Local, versionable context tree | Future v1 inspectable project-memory pattern. |
+| Graphiti/Zep | Temporal graph with provenance | V2 relation graph and validity-window pattern. |
+| Hindsight | Reflection over stored evidence | V2 slow-path synthesis pattern. |
+| Honcho | Peer and identity reasoning | V3 social-memory sidecar pattern. |
 
 ## V1 Decision
 
@@ -38,6 +38,15 @@ V1 keeps the implementation simple:
 
 The provider landscape should be rechecked against primary docs before any donor
 pattern becomes an implementation requirement.
+
+## Future Mapping
+
+- Future v1 may design active session state and workspace tree projections, but
+  must stay local-first and dependency-light.
+- V2 may add temporal graph, contradiction handling, reflection, and handoff
+  packets when recall safety requires them.
+- V3 may add social memory, connector sync, shared memory blocks, and federation
+  after the local system is proven.
 
 ## Anti-Pattern To Avoid
 

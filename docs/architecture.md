@@ -1,8 +1,9 @@
 # Architecture
 
-Agent Memory OS is a compiler-style memory framework for Hermes Agent. The
-ledger is the source of truth; downstream planes are projections optimized for
-different retrieval and injection jobs.
+Agent Memory OS is a compiler-style memory framework for Hermes Agent. Hermes
+sees one external provider; the provider keeps many internal memory planes. The
+append-only evidence ledger is the source of truth, and downstream planes are
+derived projections optimized for different retrieval and injection jobs.
 
 ## Operating Principle
 
@@ -32,6 +33,9 @@ The provider should stay small at the Hermes boundary:
 - verification recording;
 - future tools only after the v1 contract is stable.
 
+Future tools such as browse, probe, handoff, and reflect should remain behind
+the same provider boundary. They should not become separate Hermes providers.
+
 ## Planes
 
 | Plane | Current status | Purpose |
@@ -41,7 +45,7 @@ The provider should stay small at the Hermes boundary:
 | Typed semantic facts | V1 scaffold | Cited fact records separated from raw evidence. |
 | Local retrieval | V1 scaffold | SQLite + FTS over evidence and facts. |
 | Context router | V1 scaffold | Smallest useful retrieval path with bounded context packs. |
-| Verification records | V1 scaffold | Warning, stale, failed, unknown, and passed records for memory items. |
+| Verification records | V1 scaffold | Writable warning, stale, failed, unknown, and passed records for memory items. |
 | Active session state | Future v1 design | Compact current-task state once the adapter contract is proven. |
 | Workspace tree | Future v1 design | Browseable project/resource memory without a graph or cloud dependency. |
 | Temporal graph | V2 design | Validity windows, supersession, and relation-aware recall. |
@@ -57,6 +61,13 @@ This avoids the main memory-system failure mode identified in the report:
 throwing away the wrong information at write time and trying to recover it later
 with search.
 
+The write policy is:
+
+- never mutate evidence;
+- rarely delete facts;
+- usually supersede beliefs;
+- often expire temporary state.
+
 ## Read Path
 
 The read path is routed:
@@ -64,14 +75,15 @@ The read path is routed:
 1. Prefer pinned core memory for standing rules and stable preferences.
 2. Use FTS retrieval for explicit facts and evidence.
 3. Build bounded context packs with citations.
-4. Surface verification warnings before unverified claims.
+4. Keep verification records available for future warning-aware packing.
 5. Defer graph and reflection work until v2.
 
 ## Trust Boundary
 
 Injected memory should be inspectable and cited. The adapter prompt block should
-tell Hermes to use injected memory only when relevant, cite memory identifiers
-when relying on them, and treat verification warnings as higher priority.
+tell Hermes to use injected memory only when relevant and cite memory
+identifiers when relying on them. Warning-aware injection is a roadmap item until
+verification records are read and populated into context packs.
 
 ## Adapter Compatibility Risk
 

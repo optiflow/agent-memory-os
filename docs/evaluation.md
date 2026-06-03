@@ -67,27 +67,33 @@ Current local tests cover:
 Future v1 feature work should add tests for:
 
 - write path preserves evidence before derived facts;
-- verification warnings appear in packs;
+- verification records can be retrieved and populated into packs when the router
+  grows warning-aware injection;
 - adapter subprocess timeouts fail clearly;
 - real Hermes plugin discovery for a target Hermes version.
 
 ## Quality Metrics
 
+- Evidence coverage.
 - Tokens injected per turn.
-- Context-pack generation latency.
+- Context-pack generation latency and p95 prefetch latency.
 - Search latency.
 - Context-pack citation coverage.
-- Verification warning rate.
+- Verification record rate.
 - Stale or unsupported memory rate.
+- Contradiction resolution rate.
+- Handoff recovery quality, once handoff packets exist.
 - Wrong answers caused by write-side loss versus retrieval-side loss.
 
-## Benchmark Direction
+## Future Benchmark Tracks
 
-Use conversational recall and temporal-reasoning benchmarks for broad memory
-quality, then add environment-experience tests for coding-agent workflows.
+Use conversational recall benchmarks for user and session memory, temporal
+reasoning benchmarks for contradiction and validity-window behavior, and
+environment-experience tests for coding-agent workflows.
 
-The key acceptance criterion is not raw recall alone; it is avoiding stale,
-irrelevant, unsupported, or branch-invalid injection.
+The key acceptance criterion is not raw recall alone. The system must avoid
+stale, irrelevant, unsupported, or branch-invalid injection, and it must
+separate write-side preservation failures from retrieval failures.
 
 External benchmarks from the report should stay future-facing until v1 has a
 stable Hermes integration path.

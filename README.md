@@ -1,8 +1,12 @@
 # Agent Memory OS
 
-Agent Memory OS is a TypeScript-first meta memory framework for Hermes Agent. It
-packages a local-first v1 scaffold behind one Hermes-facing provider while
-leaving graph, reflection, handoff, and connector work as future design.
+Agent Memory OS is a TypeScript-first meta memory framework for Hermes coding
+agents. It packages a local-first v1 scaffold behind one Hermes-facing provider:
+one provider at the Hermes boundary, many auditable internal memory planes.
+
+The product direction is a compiler-style memory OS. Append-only evidence is
+the source of truth; facts, context packs, and future session, workspace, graph,
+handoff, and connector views are derived projections.
 
 Operating principle:
 
@@ -18,7 +22,8 @@ V1 currently prepares and tests these surfaces:
 - Typed semantic facts with source event citations.
 - SQLite + FTS retrieval for local-first search.
 - Deterministic context packs with budgeted injection.
-- Verification records for stale or unsupported memory warnings.
+- Verification records that can mark memory as stale, unsupported, unknown,
+  failed, passed, or warning.
 - A JSON stdin/stdout CLI bridge named `meta-memory`.
 - A thin Python Hermes adapter that delegates to the CLI.
 
@@ -43,7 +48,8 @@ docs               Architecture, roadmap, evaluation, and install notes
 
 - [Architecture](docs/architecture.md): canonical one-provider, multi-plane
   design.
-- [Roadmap](docs/v1-v2-roadmap.md): v1/v2 boundary and non-goals.
+- [Roadmap](docs/v1-v2-roadmap.md): phased product roadmap, v1/v2/v3 boundary,
+  and non-goals.
 - [Environment](docs/environment.md): runtime, pnpm, and adapter environment
   setup.
 - [Data model](docs/data-model.md): current domain objects and SQLite
@@ -51,7 +57,8 @@ docs               Architecture, roadmap, evaluation, and install notes
 - [CLI reference](docs/cli-reference.md): JSON command contract.
 - [Provider comparison](docs/provider-comparison.md): report-derived design
   rationale, not dependency selection.
-- [Evaluation](docs/evaluation.md): local gates and future benchmark direction.
+- [Evaluation](docs/evaluation.md): local gates, future benchmark tracks, and
+  memory-quality metrics.
 - [Hermes install notes](docs/hermes-install.md): adapter setup and compatibility
   cautions.
 - [Research brief](docs/research/meta-memory-os-brief.md): distilled report
@@ -90,6 +97,12 @@ echo '{"dbPath":"./memory.sqlite","query":"formatter preference","budgetTokens":
   | node packages/cli/dist/index.js context-pack
 ```
 
-## V2 Direction
+## Roadmap Direction
 
-V2 adds temporal relation graph projections, validity windows, citation validation against current workspace state, branch-drift checks, and optional slow-path reflection. V1 intentionally avoids these production dependencies so the first scaffold remains inspectable and testable.
+Phase 0 proves the Hermes adapter contract. Phase 1 keeps the local ledger,
+facts, FTS retrieval, context packs, verification records, CLI, and adapter
+auditable. Phase 1.1 designs active session state and workspace tree projections
+without adding graph, vector, cloud, or LLM dependencies. Phase 2 adds temporal
+recall, contradiction handling, reflection, and handoff packets. Phase 3 keeps
+social memory, shared blocks, connector sync, and federation after the local
+system is proven.

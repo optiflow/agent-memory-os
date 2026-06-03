@@ -36,6 +36,9 @@ Supported kinds:
 Evidence is the source of truth. Future projections can be rebuilt from it; they
 must not replace it.
 
+The write policy is conservative: never mutate evidence, rarely delete facts,
+usually supersede beliefs, and often expire temporary state.
+
 ## Core Memory Blocks
 
 `CoreMemoryBlock` stores always-visible, high-authority memory such as standing
@@ -76,8 +79,9 @@ fixtures only.
 - `unknown`
 - `warning`
 
-V1 records warnings and status. It does not yet validate citations against live
-workspace state or branches.
+V1 records warnings and status. It does not yet retrieve verification records
+for context-pack population, validate citations against live workspace state, or
+check branches.
 
 ## Context Packs
 
@@ -88,7 +92,8 @@ workspace state or branches.
 - `estimatedTokens`: pack estimate.
 - `items`: core, evidence, or fact items ranked by TypeScript store/router logic
   with citations.
-- `verificationWarnings`: relevant warning records.
+- `verificationWarnings`: warning records when a future router populates them;
+  the current router returns an empty list.
 
 Context packs should be bounded, cited, and inspectable.
 

@@ -8,8 +8,12 @@ for third-party provider claims.
 
 The report's strongest conclusion is that agent memory is not one problem. A
 Hermes memory OS should expose one external provider to Hermes while keeping
-separate internal planes for evidence, state, facts, context packing, and future
-temporal reasoning.
+separate internal planes for evidence, state, facts, context packing, workspace
+resources, and future temporal reasoning.
+
+The product direction is compiler-style memory: write raw evidence once, then
+derive task state, facts, profiles, context packs, workspace views, graph views,
+and handoff packets from that ledger as the roadmap matures.
 
 The repo already follows the right outer shape:
 
@@ -26,21 +30,25 @@ Use these as design patterns, not dependencies:
 
 | Pattern | Donor examples | Repo implication |
 | --- | --- | --- |
-| Always-visible memory | Hermes built-in memory, Letta, Memory-OS | Keep core memory explicit and high-authority. |
-| Evidence capture | Memori, RetainDB, Graphiti episodes | Preserve append-only raw events. |
-| Active task state | TencentDB-Agent-Memory | Plan a compact session-state projection before building it. |
-| Typed facts and profiles | Mem0, RetainDB, Supermemory | Keep facts typed, cited, and separate from evidence. |
-| Temporal graph | Graphiti, Hindsight | Keep validity windows and reflection in v2. |
-| Workspace tree | OpenViking, ByteRover | Keep browseable project memory future-facing until v1 is stable. |
-| Social memory | Honcho | Treat peer/identity modeling as optional future work. |
+| Always-visible memory | Hermes built-in memory, Letta, Memory-OS | Current v1 discipline: keep core memory explicit and high-authority. |
+| Evidence capture | Memori, RetainDB, Graphiti episodes | Current v1 discipline: preserve append-only raw events. |
+| Typed facts and profiles | Mem0, RetainDB, Supermemory | Current v1 discipline: keep facts typed, cited, and separate from evidence. |
+| Active task state | TencentDB-Agent-Memory | Future v1 design: compact current-task projection. |
+| Workspace tree | OpenViking, ByteRover | Future v1 design: browseable project memory without graph/cloud dependencies. |
+| Temporal graph | Graphiti, Hindsight | V2 design: validity windows, supersession, contradiction handling, and reflection. |
+| Social memory | Honcho | V3 design: optional peer and identity modeling. |
 
-## V1 Preparation Priority
+## Product Sequencing
 
-1. Prove the Hermes adapter contract for the target Hermes version.
-2. Keep the local evidence ledger, facts, FTS, context packs, and verification
-   records auditable.
-3. Document CLI and data-model contracts before adding features.
-4. Keep CI configured so future feature work is gated by the same local checks.
+1. Phase 0 proves the Hermes adapter contract for the target Hermes version.
+2. Phase 1 keeps the local evidence ledger, facts, FTS, context packs,
+   verification records, CLI, and adapter auditable.
+3. Phase 1.1 designs active session state and workspace tree projections without
+   adding graph, vector, cloud, connector, or LLM dependencies.
+4. Phase 2 adds temporal recall, contradiction handling, optional reflection,
+   and handoff packets.
+5. Phase 3 leaves social memory, connector sync, shared blocks, and federation
+   until the local system is proven.
 
 ## Explicit Non-Goals For This Prep Pass
 
