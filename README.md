@@ -1,5 +1,7 @@
 # Agent Memory OS
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/optiflow/agent-memory-os)
+
 Agent Memory OS is a local-first memory framework for Hermes coding agents. It
 keeps one Hermes-facing provider at the boundary while using several auditable
 internal memory views behind it: evidence, durable facts, search results,
