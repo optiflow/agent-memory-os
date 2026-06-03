@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type {
   CoreMemoryBlock,
   EvidenceEvent,
@@ -184,7 +185,7 @@ export async function runCommand(command: CommandName, input: CommandInput): Pro
   try {
     if (command === "remember") {
       const event: EvidenceEvent = {
-        id: `event_${crypto.randomUUID()}`,
+        id: `event_${randomUUID()}`,
         kind: optionalEvidenceKind(input),
         actor: optionalActor(input),
         content: requireString(input, "content"),

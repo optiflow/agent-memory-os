@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.2.2",
+  "packageManager": "pnpm@11.5.1",
   "scripts": {
     "adapter:check": "python3 -m py_compile adapters/hermes/plugins/memory/meta_memory/__init__.py adapters/hermes/plugins/memory/meta_memory/test/test_provider.py && python3 -m unittest discover adapters/hermes/plugins/memory/meta_memory/test",
     "bench": "turbo run bench",
@@ -23,14 +23,14 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
-    "@types/node": "24.12.4",
-    "lefthook": "1.13.6",
+    "@types/node": "25.9.1",
+    "lefthook": "2.1.9",
     "turbo": "2.9.16",
-    "typescript": "5.9.3",
-    "vitest": "4.1.7"
+    "typescript": "6.0.3",
+    "vitest": "4.1.8"
   },
   "engines": {
-    "node": ">=22.5.0",
-    "pnpm": ">=10"
+    "node": ">=22.13.0",
+    "pnpm": ">=11.5.1"
   }
 }

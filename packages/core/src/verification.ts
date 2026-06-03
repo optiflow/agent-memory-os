@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { VerificationRecord, VerificationStatus } from "./types.js";
 
 export function createVerificationRecord(input: {
@@ -7,7 +8,7 @@ export function createVerificationRecord(input: {
   metadata?: VerificationRecord["metadata"];
 }): VerificationRecord {
   return {
-    id: `verification_${crypto.randomUUID()}`,
+    id: `verification_${randomUUID()}`,
     targetId: input.targetId,
     status: input.status,
     checkedAt: new Date().toISOString(),
