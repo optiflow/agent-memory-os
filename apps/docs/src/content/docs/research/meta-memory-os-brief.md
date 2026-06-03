@@ -1,4 +1,7 @@
-# Meta Memory OS Research Brief
+---
+title: Meta Memory OS Research Brief
+description: Repo-owned synthesis of the report-backed memory architecture direction.
+---
 
 This brief distills the attached report into repo-owned preparation guidance. It
 is not an implementation spec and should not be treated as primary-source proof
@@ -21,7 +24,7 @@ The repo already follows the right outer shape:
 - TypeScript-owned memory model, SQLite/FTS store, routing, context packing,
   verification, CLI bridge, tests, and package orchestration;
 - a thin Python adapter that maps Hermes hooks and tools to TypeScript only;
-- SQLite + FTS as the local-first v1 store;
+- SQLite + FTS as the local-first V1 store;
 - graph, reflection, and handoff work deferred.
 
 ## Donor Patterns
@@ -30,9 +33,9 @@ Use these as design patterns, not dependencies:
 
 | Pattern | Donor examples | Repo implication |
 | --- | --- | --- |
-| Always-visible memory | Hermes built-in memory, Letta, Memory-OS | Current v1 discipline: keep core memory explicit and high-authority. |
-| Evidence capture | Memori, RetainDB, Graphiti episodes | Current v1 discipline: preserve append-only raw events. |
-| Typed facts and profiles | Mem0, RetainDB, Supermemory | Current v1 discipline: keep facts typed, cited, and separate from evidence. |
+| Always-visible memory | Hermes built-in memory, Letta, Memory-OS | Current V1 discipline: keep core memory explicit and high-authority. |
+| Evidence capture | Memori, RetainDB, Graphiti episodes | Current V1 discipline: preserve append-only raw events. |
+| Typed facts and profiles | Mem0, RetainDB, Supermemory | Current V1 discipline: keep facts typed, cited, and separate from evidence. |
 | Active task state | TencentDB-Agent-Memory | Current V1.1 design: compact current-task projection. |
 | Workspace tree | OpenViking, ByteRover | Current V1.1 design: browseable project memory without graph/cloud dependencies. |
 | Temporal graph | Graphiti, Hindsight | V2 design: validity windows, supersession, contradiction handling, and reflection. |
@@ -41,8 +44,8 @@ Use these as design patterns, not dependencies:
 ## Product Sequencing
 
 1. Phase 0 aligns the Hermes adapter to the local `plugin.yaml`, `register(ctx)`,
-   `initialize(...)`, hook, tool-schema, and CLI-delegation contract; live Hermes
-   runtime verification remains a separate target-version check.
+   `initialize(...)`, hook, tool-schema, and CLI-delegation contract; live
+   Hermes runtime verification remains a separate target-version check.
 2. Phase 1 keeps the local evidence ledger, facts, FTS, context packs,
    verification records, CLI, and adapter auditable.
 3. Phase 1.1 implements active session state and workspace resource projections

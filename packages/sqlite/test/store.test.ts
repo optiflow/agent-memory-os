@@ -124,7 +124,7 @@ describe("SQLiteMemoryStore", () => {
 
     try {
       await store.upsertWorkspaceResource({
-        uri: "repo://docs",
+        uri: "repo://apps/docs/src/content/docs",
         scope: { type: "workspace", id: "agent-memory-os" },
         kind: "doc",
         title: "Docs root",
@@ -133,8 +133,8 @@ describe("SQLiteMemoryStore", () => {
         sourceEventIds: ["event_1"],
       });
       await store.upsertWorkspaceResource({
-        uri: "repo://docs/v1-v2-roadmap.md",
-        parentUri: "repo://docs",
+        uri: "repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md",
+        parentUri: "repo://apps/docs/src/content/docs",
         scope: { type: "workspace", id: "agent-memory-os" },
         kind: "doc",
         title: "Roadmap",
@@ -143,7 +143,7 @@ describe("SQLiteMemoryStore", () => {
         sourceEventIds: ["event_1"],
       });
       await store.upsertWorkspaceResource({
-        uri: "repo://docs/v1-v2-roadmap.md",
+        uri: "repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md",
         scope: { type: "workspace", id: "other" },
         kind: "doc",
         title: "Other roadmap",
@@ -154,16 +154,18 @@ describe("SQLiteMemoryStore", () => {
 
       const children = await store.listWorkspaceResources({
         scope: { type: "workspace", id: "agent-memory-os" },
-        parentUri: "repo://docs",
+        parentUri: "repo://apps/docs/src/content/docs",
       });
       const results = await store.search("browseable workspace resources", 5, {
         type: "workspace",
         id: "agent-memory-os",
       });
 
-      expect(children.map((resource) => resource.uri)).toEqual(["repo://docs/v1-v2-roadmap.md"]);
+      expect(children.map((resource) => resource.uri)).toEqual([
+        "repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md",
+      ]);
       expect(results.map((result) => result.citation)).toContain(
-        "resource:repo://docs/v1-v2-roadmap.md",
+        "resource:repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md",
       );
       expect(JSON.stringify(results)).not.toContain("Other roadmap");
     } finally {

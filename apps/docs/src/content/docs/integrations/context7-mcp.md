@@ -1,6 +1,10 @@
-# Context7 MCP
+---
+title: Context7 MCP
+description: Current documentation lookup policy for framework and library work.
+---
 
-Context7 is the documentation MCP for this repo. Use it when implementation depends on current framework or library behavior rather than model memory.
+Context7 is the documentation MCP for this repo. Use it when implementation
+depends on current framework or library behavior rather than model memory.
 
 ## Installed Codex MCP
 
@@ -20,7 +24,8 @@ context7
   args: -y @upstash/context7-mcp@latest
 ```
 
-New MCP servers may not appear in an already-running Codex session. Restart the session if the `context7` tools are not visible.
+New MCP servers may not appear in an already-running Codex session. Restart the
+session if the `context7` tools are not visible.
 
 ## Documentation Targets
 
@@ -32,10 +37,14 @@ Resolve these through Context7 before changing related code:
 - pnpm: workspace settings, install/build approval behavior, lockfile behavior.
 - TypeScript: `NodeNext`, project references, composite builds.
 - Lefthook: git hook config and pre-commit behavior.
-- Node.js `node:sqlite`: `DatabaseSync`, statement APIs, SQLite runtime constraints.
+- Node.js `node:sqlite`: `DatabaseSync`, statement APIs, SQLite runtime
+  constraints.
 - Model Context Protocol: MCP server/client configuration and tool contracts.
 - Hermes Agent: memory provider and MCP integration behavior, when indexed.
+- Astro Starlight: docs app config, content collections, sidebar, static build,
+  and GitHub Pages deployment behavior.
 
 ## API Key Policy
 
-Do not commit API keys. Context7 supports `CONTEXT7_API_KEY` for higher rate limits; configure it outside the repo if needed.
+Do not commit API keys. Context7 supports `CONTEXT7_API_KEY` for higher rate
+limits; configure it outside the repo if needed.

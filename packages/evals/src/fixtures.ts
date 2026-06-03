@@ -180,7 +180,7 @@ const sessionStateSeed: BenchmarkSeed = {
   ],
   workspaceResources: [
     {
-      uri: "repo://docs/unrelated-resource.md",
+      uri: "repo://apps/docs/src/content/docs/start/unrelated-resource.md",
       scope: workspaceScope,
       kind: "doc",
       title: "Unrelated resource",
@@ -207,7 +207,8 @@ const workspaceResourceSeed: BenchmarkSeed = {
       id: "event_workspace_resource_update",
       kind: "system_event",
       actor: "system",
-      content: "Workspace resource repo://docs/v1-v2-roadmap.md was indexed.",
+      content:
+        "Workspace resource repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md was indexed.",
       timestamp,
       scope: workspaceScope,
     },
@@ -227,8 +228,8 @@ const workspaceResourceSeed: BenchmarkSeed = {
   ],
   workspaceResources: [
     {
-      uri: "repo://docs/v1-v2-roadmap.md",
-      parentUri: "repo://docs",
+      uri: "repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md",
+      parentUri: "repo://apps/docs/src/content/docs",
       scope: workspaceScope,
       kind: "doc",
       title: "V1/V2 roadmap",
@@ -278,7 +279,7 @@ export const benchmarkCases: BenchmarkCase[] = [
     policy: "task",
     budgetTokens: 420,
     expectedItemIds: ["session_v1_1"],
-    rejectedItemIds: ["repo://docs/unrelated-resource.md"],
+    rejectedItemIds: ["repo://apps/docs/src/content/docs/start/unrelated-resource.md"],
     seed: sessionStateSeed,
   },
   {
@@ -288,7 +289,7 @@ export const benchmarkCases: BenchmarkCase[] = [
     query: "browseable workspace resource roadmap",
     policy: "workspace",
     budgetTokens: 420,
-    expectedItemIds: ["repo://docs/v1-v2-roadmap.md"],
+    expectedItemIds: ["repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md"],
     rejectedItemIds: ["session_unrelated"],
     seed: workspaceResourceSeed,
   },

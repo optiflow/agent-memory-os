@@ -31,8 +31,10 @@ Hermes adapter.
 The Hermes boundary is aligned to the current local plugin contract described by
 Hermes docs: `plugin.yaml` metadata, `register(ctx)` registration,
 `initialize(...)` bridge setup, lifecycle hook wiring, and JSON-style tool
-schemas with JSON-string tool results. This repo has local smoke proof for the
-adapter boundary and CLI bridge only. It does not claim a live production Hermes
+schemas with JSON-string tool results. The repository root includes a thin
+Hermes plugin shim for Git-based installs, while the nested adapter remains the
+implementation boundary. This repo has local smoke proof for the adapter
+boundary and CLI bridge only. It does not claim a live production Hermes
 installation has been tested.
 
 ## What Works Today
@@ -50,6 +52,8 @@ installation has been tested.
 - A `meta-memory` CLI bridge with `seed-sample`, `remember`, `search`,
   `context-pack`, `upsert-session-state`, `upsert-resource`,
   `browse-resources`, and `verify` commands.
+- A Hermes `status` tool that reports install/configuration readiness before
+  the TypeScript CLI is available.
 - Adapter-boundary Python checks and local smoke proof for the Hermes contract.
 
 ## What Is Out Of V1/V1.1
@@ -102,8 +106,11 @@ Expected result:
 packages/core      Domain types, context router, packer, verification policy
 packages/sqlite    SQLite schema, migrations, FTS search, local store
 packages/cli       JSON CLI bridge for Hermes and future adapters
+packages/evals     Deterministic eval and benchmark fixtures
 adapters/hermes    Thin Python Hermes plugin contract bridge
-docs               Architecture, roadmap, evaluation, and install notes
+apps/docs          Astro Starlight documentation site
+plugin.yaml        Root Hermes plugin shim for Git-based installs
+skills             Bundled Hermes setup runbook
 ```
 
 ## CLI Surface
@@ -127,23 +134,32 @@ Current commands:
 - `browse-resources`: list workspace resources under an optional parent URI.
 - `verify`: record verification status for a memory item.
 
-See [docs/cli-reference.md](docs/cli-reference.md) for request and response
-contracts.
+See the
+[CLI reference](apps/docs/src/content/docs/reference/cli-reference.md) for
+request and response contracts.
 
 ## Read Next
 
-- Understand the design: [docs/architecture.md](docs/architecture.md) and
-  [docs/data-model.md](docs/data-model.md).
-- Set up the environment: [docs/environment.md](docs/environment.md).
-- Use the CLI: [docs/cli-reference.md](docs/cli-reference.md).
+- Read the published docs:
+  [https://optiflow.github.io/agent-memory-os/](https://optiflow.github.io/agent-memory-os/).
+- Understand the design:
+  [architecture](apps/docs/src/content/docs/architecture/architecture.md) and
+  [data model](apps/docs/src/content/docs/architecture/data-model.md).
+- Set up the environment:
+  [environment](apps/docs/src/content/docs/start/environment.md).
+- Use the CLI:
+  [CLI reference](apps/docs/src/content/docs/reference/cli-reference.md).
 - Inspect the Hermes boundary:
   [adapters/hermes/README.md](adapters/hermes/README.md) and
-  [docs/hermes-install.md](docs/hermes-install.md).
-- Review quality gates and evals: [docs/evaluation.md](docs/evaluation.md).
-- Check roadmap boundaries: [docs/v1-v2-roadmap.md](docs/v1-v2-roadmap.md).
+  [Hermes install notes](apps/docs/src/content/docs/integrations/hermes-install.md).
+- Review quality gates and evals:
+  [evaluation](apps/docs/src/content/docs/reference/evaluation.md).
+- Check roadmap boundaries:
+  [roadmap](apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md).
 - Read the research basis:
-  [docs/research/meta-memory-os-brief.md](docs/research/meta-memory-os-brief.md)
-  and [docs/provider-comparison.md](docs/provider-comparison.md).
+  [Meta Memory OS research brief](apps/docs/src/content/docs/research/meta-memory-os-brief.md)
+  and
+  [provider comparison](apps/docs/src/content/docs/research/provider-comparison.md).
 
 Coding-agent operating instructions live in [AGENTS.md](AGENTS.md).
 

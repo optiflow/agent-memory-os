@@ -91,7 +91,7 @@ class FakeStore implements MemoryStore {
         kind: "resource",
         content: "Roadmap docs describe workspace resource memory.",
         score: 0.9,
-        citation: "resource:repo://docs/v1-v2-roadmap.md",
+        citation: "resource:repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md",
       },
       {
         id: "fact_local",

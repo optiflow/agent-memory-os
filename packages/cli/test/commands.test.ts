@@ -79,15 +79,15 @@ describe("runCommand", () => {
     try {
       await runCommand("upsert-resource", {
         dbPath,
-        uri: "repo://docs",
+        uri: "repo://apps/docs/src/content/docs",
         title: "Docs",
         content: "Documentation root.",
         kind: "doc",
       });
       await runCommand("upsert-resource", {
         dbPath,
-        uri: "repo://docs/v1-v2-roadmap.md",
-        parentUri: "repo://docs",
+        uri: "repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md",
+        parentUri: "repo://apps/docs/src/content/docs",
         title: "Roadmap",
         content: "Workspace resources are browseable and searchable.",
         kind: "doc",
@@ -95,7 +95,7 @@ describe("runCommand", () => {
 
       const browse = await runCommand("browse-resources", {
         dbPath,
-        parentUri: "repo://docs",
+        parentUri: "repo://apps/docs/src/content/docs",
       });
       const pack = await runCommand("context-pack", {
         dbPath,
@@ -103,8 +103,12 @@ describe("runCommand", () => {
         policy: "workspace",
       });
 
-      expect(JSON.stringify(browse)).toContain("repo://docs/v1-v2-roadmap.md");
-      expect(JSON.stringify(pack)).toContain("resource:repo://docs/v1-v2-roadmap.md");
+      expect(JSON.stringify(browse)).toContain(
+        "repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md",
+      );
+      expect(JSON.stringify(pack)).toContain(
+        "resource:repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md",
+      );
       expect(JSON.stringify(pack)).not.toContain("sessionState");
     } finally {
       await rm(dir, { recursive: true, force: true });

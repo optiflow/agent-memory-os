@@ -1,6 +1,9 @@
-# Data Model
+---
+title: Data Model
+description: Evidence events, facts, projections, verification records, and context packs.
+---
 
-The v1 model separates raw evidence, durable facts, injected context, and
+The V1 model separates raw evidence, durable facts, injected context, and
 verification. Do not collapse these into one memory table.
 
 TypeScript domain types and SQLite migrations are the source of truth for schema
@@ -51,7 +54,7 @@ Important fields:
 - `metadata`: optional JSON for source or ownership hints.
 
 Hermes built-in `MEMORY.md` and `USER.md` remain separate from this store, but
-the adapter can mirror explicit memory writes into the v1 ledger.
+the adapter can mirror explicit memory writes into the V1 ledger.
 
 Hermes plugin tool schemas are boundary input schemas only. TypeScript domain
 types and SQLite migrations remain the source of truth for persisted memory.
@@ -102,8 +105,8 @@ Only `active` session states are automatically considered by the context router.
 ## Workspace Resources
 
 `WorkspaceResource` is the browseable workspace/resource projection. It stores
-URI-addressed resources with a title, kind, content, optional `parentUri`, scope,
-source event IDs, and metadata.
+URI-addressed resources with a title, kind, content, optional `parentUri`,
+scope, source event IDs, and metadata.
 
 Resources are keyed by scope plus URI so similarly named project and workspace
 resources do not collide. The resource tree is local SQLite + FTS only; it does
@@ -117,8 +120,8 @@ provider.
 - `query`: user or adapter query.
 - `budgetTokens`: requested budget.
 - `estimatedTokens`: pack estimate.
-- `items`: core, evidence, fact, session, or resource items ranked by TypeScript
-  store/router logic with citations.
+- `items`: core, evidence, fact, session, or resource items ranked by
+  TypeScript store/router logic with citations.
 - `verificationWarnings`: latest failed, stale, unknown, or warning records for
   items included in the pack.
 

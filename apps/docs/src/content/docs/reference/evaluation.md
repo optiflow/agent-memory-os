@@ -1,7 +1,10 @@
-# Evaluation Plan
+---
+title: Evaluation
+description: Local acceptance gates, smoke tests, deterministic evals, and benchmark tracks.
+---
 
 Evaluation starts with deterministic local gates. Memory benchmarks are useful
-only after the adapter contract and v1 data paths are stable.
+only after the adapter contract and V1 data paths are stable.
 
 ## Local Acceptance
 
@@ -48,15 +51,18 @@ Expected result:
 ## Adapter Smoke Test
 
 ```bash
+python3 -m py_compile __init__.py
 python3 -m py_compile adapters/hermes/plugins/memory/meta_memory/__init__.py
 python3 -m unittest discover adapters/hermes/plugins/memory/meta_memory/test
 pnpm adapter:check
 ```
 
 These commands are local adapter-boundary smoke proof. They cover the
-`plugin.yaml` manifest fixture, absence of stale JSON metadata, `initialize(...)`
-bridge setup, `register(ctx)` wiring, the local `on_session_end` hook fixture,
-Hermes `parameters` tool schemas, JSON-string tool results, and CLI delegation.
+root and nested `plugin.yaml` manifest fixtures, absence of stale JSON metadata,
+root shim delegation, `initialize(...)` bridge setup, `register(ctx)` wiring,
+setup-skill registration when available, the local `on_session_end` hook
+fixture, Hermes `parameters` tool schemas, JSON-string tool results, progressive
+configuration status, and CLI delegation.
 
 Before real Hermes integration testing, verify the target Hermes plugin contract
 against a live checkout. Local fixture coverage does not prove Hermes runtime
@@ -72,8 +78,10 @@ Current local tests cover:
   boundaries;
 - CLI seed and context-pack smoke behavior;
 - Hermes adapter metadata uses `plugin.yaml`;
-- adapter `initialize(...)` and `register(ctx)` wire the provider, v1/v1.1
-  tools, and `on_session_end` hook in a local fixture;
+- adapter `initialize(...)` and `register(ctx)` wire the provider, V1/V1.1
+  tools, setup skill, and `on_session_end` hook in a local fixture;
+- adapter `status` reports missing CLI, env CLI, repo-local CLI fallback, and
+  selected database path without calling the CLI;
 - adapter tool schemas use the Hermes `parameters` shape;
 - adapter tool handlers return JSON strings;
 - adapter tool-call arguments cannot override configured `META_MEMORY_DB`;

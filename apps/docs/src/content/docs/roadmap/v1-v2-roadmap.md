@@ -1,6 +1,9 @@
-# V1, V2, and V3 Roadmap
+---
+title: V1, V2, and V3 Roadmap
+description: Phase boundaries for local-first memory, safer recall, and future federation.
+---
 
-This roadmap preserves the local-first v1 boundary while keeping the report's
+This roadmap preserves the local-first V1 boundary while keeping the report's
 larger Meta Memory OS direction visible. The product shape is one Hermes
 provider with many internal planes, not several competing providers.
 
@@ -10,14 +13,16 @@ Before adding runtime features, align the Hermes adapter boundary to the current
 local plugin contract and prove it locally:
 
 - `plugin.yaml` metadata and required fields;
+- root plugin shim for Git-based Hermes plugin installs;
 - Python `register(ctx)` entrypoint and discovery shape;
 - `initialize(...)` bridge setup;
 - lifecycle hook names and current `on_session_end` registration;
-- tool schemas and handler registration for `context_pack`, `remember`,
-  `search`, V1.1 session/resource tools, and `verify`;
+- tool schemas and handler registration for `status`, `context_pack`,
+  `remember`, `search`, V1.1 session/resource tools, and `verify`;
+- optional setup-skill registration when Hermes exposes `register_skill(...)`;
 - local smoke proof for adapter compilation, manifest shape, `initialize(...)`,
-  `register(ctx)`, tool schemas, CLI delegation, configured SQLite path
-  handling, and tool-call argument boundaries.
+  `register(ctx)`, tool schemas, `status` diagnostics, CLI delegation,
+  configured SQLite path handling, and tool-call argument boundaries.
 
 Until this is loaded and exercised by a real target Hermes version, adapter work
 remains a local contract alignment and smoke-test target, not a production
@@ -73,13 +78,13 @@ V2 should add projections and policies that improve recall safety:
 - optional reflection for synthesis-heavy prompts;
 - handoff packets if multi-agent workflows need them.
 
-V2 should remain routed. Graph and reflection work should run only when the query
-needs temporal, relational, or inferential reasoning.
+V2 should remain routed. Graph and reflection work should run only when the
+query needs temporal, relational, or inferential reasoning.
 
-## Phase 3: Shared and Federated Memory
+## Phase 3: Shared And Federated Memory
 
 Social and peer memory, external connector sync, shared memory blocks, and
-federation hooks belong after v1 is stable and v2 recall safety is proven.
+federation hooks belong after V1 is stable and V2 recall safety is proven.
 
 ## Operating Guardrails
 

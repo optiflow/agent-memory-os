@@ -441,7 +441,7 @@ export async function runCommand(command: CommandName, input: CommandInput): Pro
         sourceEventIds: [event.id],
       };
       const resource: WorkspaceResource = {
-        uri: "repo://docs/v1-v2-roadmap.md",
+        uri: "repo://apps/docs/src/content/docs/roadmap/v1-v2-roadmap.md",
         scope: defaultScope(input),
         kind: "doc",
         title: "V1/V2 roadmap",

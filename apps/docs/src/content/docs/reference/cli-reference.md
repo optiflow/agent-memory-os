@@ -1,4 +1,7 @@
-# CLI Reference
+---
+title: CLI Reference
+description: JSON stdin/stdout commands for the meta-memory bridge.
+---
 
 `meta-memory` is a JSON stdin/stdout bridge for Hermes and local smoke tests.
 
@@ -23,9 +26,9 @@ echo '{"dbPath":":memory:","query":"Biome","budgetTokens":400}' \
 | `scope` | `{ "type": "workspace", "id": "default" }` | Optional scope object. |
 | `metadata` | omitted | Optional JSON object where supported. |
 
-If neither `dbPath` nor `META_MEMORY_DB` is set, direct CLI calls use `:memory:`.
-Those calls are ephemeral and are not equivalent to the Hermes adapter's
-file-backed default database.
+If neither `dbPath` nor `META_MEMORY_DB` is set, direct CLI calls use
+`:memory:`. Those calls are ephemeral and are not equivalent to the Hermes
+adapter's file-backed default database.
 
 `scope` partitions local memory. The default workspace scope is suitable for
 smoke tests, but real workspace, project, and session callers should pass a
@@ -183,6 +186,6 @@ Returns:
 
 ## Error Contract
 
-The CLI exits non-zero and writes an error object to stderr when input is invalid
-or the command is unknown. The Hermes adapter treats non-zero exits, empty
-stdout, and invalid JSON as adapter failures.
+The CLI exits non-zero and writes an error object to stderr when input is
+invalid or the command is unknown. The Hermes adapter treats non-zero exits,
+empty stdout, and invalid JSON as adapter failures.

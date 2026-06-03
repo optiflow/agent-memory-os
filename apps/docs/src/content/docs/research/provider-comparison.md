@@ -1,4 +1,7 @@
-# Provider Comparison
+---
+title: Provider Comparison
+description: Donor patterns from memory systems without adopting them as dependencies.
+---
 
 The attached report supports a compositional design rather than adopting one
 provider wholesale. This page records donor patterns only; it does not add these
@@ -8,12 +11,12 @@ systems as dependencies.
 
 | Source pattern | Useful component | Roadmap role |
 | --- | --- | --- |
-| Hermes built-in memory | `MEMORY.md` and `USER.md` remain active | Current v1 L0 core memory alongside the external provider. |
-| Letta | Always-visible memory blocks | Current v1 discipline for pinned core memory. |
-| Memory-OS | Trust and injection policy | Current v1/v1.1 discipline for cited, bounded injection and verification warnings. |
-| Memori | Attributed background capture | Current v1 evidence-ledger and event-attribution pattern. |
-| RetainDB | Scoped context and agent events | Current v1 context-routing pattern; V2 handoff pattern. |
-| Mem0 | Typed fact modeling and retrieval patterns | Current v1 semantic fact plane design. |
+| Hermes built-in memory | `MEMORY.md` and `USER.md` remain active | Current V1 L0 core memory alongside the external provider. |
+| Letta | Always-visible memory blocks | Current V1 discipline for pinned core memory. |
+| Memory-OS | Trust and injection policy | Current V1/V1.1 discipline for cited, bounded injection and verification warnings. |
+| Memori | Attributed background capture | Current V1 evidence-ledger and event-attribution pattern. |
+| RetainDB | Scoped context and agent events | Current V1 context-routing pattern; V2 handoff pattern. |
+| Mem0 | Typed fact modeling and retrieval patterns | Current V1 semantic fact plane design. |
 | Supermemory | Profile and hybrid memory/RAG surfaces | Future profile-serving pattern. |
 | TencentDB-Agent-Memory | Compact symbolic session state | Current V1.1 active task-state projection pattern. |
 | OpenViking | URI-like browseable memory/resource model | Current V1.1 workspace resource tree pattern. |
@@ -51,7 +54,7 @@ pattern becomes an implementation requirement.
 
 ## Anti-Pattern To Avoid
 
-Do not collapse evidence, summaries, facts, profiles, and beliefs into one store.
-Evidence should be append-only. Facts should be cited and updateable. Context
-packs should be generated views. Temporal and reflective reasoning belongs in
-later projections.
+Do not collapse evidence, summaries, facts, profiles, and beliefs into one
+store. Evidence should be append-only. Facts should be cited and updateable.
+Context packs should be generated views. Temporal and reflective reasoning
+belongs in later projections.

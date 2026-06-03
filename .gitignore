@@ -1,5 +1,6 @@
 .DS_Store
 .pnpm-store/
+.astro/
 .turbo/
 node_modules/
 

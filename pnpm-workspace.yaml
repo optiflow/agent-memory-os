@@ -1,7 +1,10 @@
 packages:
+  - "apps/*"
   - "packages/*"
 
 confirmModulesPurge: false
 
 allowBuilds:
+  esbuild: true
   lefthook: true
+  sharp: true

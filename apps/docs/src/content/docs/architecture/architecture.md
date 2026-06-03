@@ -1,4 +1,7 @@
-# Architecture
+---
+title: Architecture
+description: The memory planes, write path, read path, and Hermes provider boundary.
+---
 
 Agent Memory OS is a compiler-style memory framework for Hermes Agent. Hermes
 sees one external provider; the provider keeps many internal memory planes. The
@@ -33,7 +36,7 @@ The provider should stay small at the Hermes boundary:
 - active session-state updates;
 - browseable workspace resource updates and listing;
 - verification recording;
-- future graph, reflection, and handoff tools only after v1/v1.1 are stable.
+- future graph, reflection, and handoff tools only after V1/V1.1 are stable.
 
 Future tools such as probe, handoff, and reflect should remain behind the same
 provider boundary. They should not become separate Hermes providers.
@@ -57,8 +60,8 @@ provider boundary. They should not become separate Hermes providers.
 ## Write Path
 
 All memory writes should preserve raw evidence first. Facts, context packs,
-verification records, session state, workspace resources, and future
-projections derive from that evidence.
+verification records, session state, workspace resources, and future projections
+derive from that evidence.
 
 This avoids the main memory-system failure mode identified in the report:
 throwing away the wrong information at write time and trying to recover it later
@@ -80,19 +83,21 @@ The read path is routed:
 3. Include active session state for `auto` and `task` policies.
 4. Include workspace resources for `auto` and `workspace` policies.
 5. Build bounded context packs with citations and latest verification warnings.
-6. Defer graph and reflection work until v2.
+6. Defer graph and reflection work until V2.
 
 ## Trust Boundary
 
 Injected memory should be inspectable and cited. The adapter prompt block should
 tell Hermes to use injected memory only when relevant and cite memory
-identifiers when relying on them. Context packs now include latest non-passed
-verification records for packed item IDs.
+identifiers when relying on them. If the plugin is installed but the CLI is not
+ready, the prompt block tells Hermes to call `meta_memory.status` before relying
+on memory tools. Context packs now include latest non-passed verification
+records for packed item IDs.
 
 ## Adapter Compatibility Risk
 
-Current repo code aligns the local adapter to `plugin.yaml`,
-`register(ctx)`, `initialize(...)`, provider tool schemas, and lifecycle hook
-wiring. This is local contract proof only. Before claiming production Hermes
-compatibility, verify a target Hermes checkout loads the plugin and exercises
-the registered tools and hooks.
+Current repo code aligns the local adapter to root and nested `plugin.yaml`
+manifests, `register(ctx)`, `initialize(...)`, provider tool schemas, optional
+setup-skill registration, and lifecycle hook wiring. This is local contract
+proof only. Before claiming production Hermes compatibility, verify a target
+Hermes checkout loads the plugin and exercises the registered tools and hooks.
