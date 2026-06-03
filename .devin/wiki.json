@@ -123,7 +123,7 @@
       "parent": "Project Overview and Agent Operating Rules",
       "page_notes": [
         {
-          "content": "Priority files: apps/docs/src/content/docs/reference/evaluation.md, packages/evals/src/fixtures.ts, packages/evals/src/runner.ts, packages/evals/src/memory.bench.ts, package.json."
+          "content": "Priority files: apps/docs/src/content/docs/reference/evaluation.md, packages/docs-guard/src/docsGuard.ts, packages/docs-guard/test/docsGuard.test.ts, packages/evals/src/fixtures.ts, packages/evals/src/runner.ts, packages/evals/src/memory.bench.ts, package.json."
         }
       ]
     },
@@ -133,7 +133,7 @@
       "parent": "Project Overview and Agent Operating Rules",
       "page_notes": [
         {
-          "content": "Priority files: package.json, turbo.json, biome.json, lefthook.yml, tsconfig.base.json, pnpm-workspace.yaml."
+          "content": "Priority files: package.json, packages/docs-guard/src/docsGuard.ts, turbo.json, biome.json, lefthook.yml, tsconfig.base.json, pnpm-workspace.yaml."
         }
       ]
     },

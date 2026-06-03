@@ -20,15 +20,46 @@ pnpm eval
 pnpm bench:ci
 pnpm build
 pnpm adapter:check
+pnpm docs:check
 pnpm run ci
 ```
 
 `pnpm run ci` is the expected pull-request gate and runs lint, typecheck, tests,
-build, adapter checks, deterministic memory evals, and report-only benchmark
-timings.
+build, adapter checks, deterministic memory evals, the documentation freshness
+gate, and report-only benchmark timings.
 
 Python checks are adapter-boundary checks only. TypeScript owns memory ranking,
 schema, persistence, routing, verification policy, and product behavior.
+
+## Documentation Freshness Gate
+
+Run the docs guard before finalizing implementation changes:
+
+```bash
+pnpm docs:check
+```
+
+The guard fails when code, adapter, tooling, workflow, or policy changes land
+without the matching documentation surface in the same diff. It checks changed
+paths, validates `.devin/wiki.json`, and rejects stale canonical references to
+deleted root `docs/*.md` files.
+
+Expected behavior:
+
+- core, SQLite, eval, router, context-pack, verification, schema, and memory
+  behavior changes require Starlight docs under `apps/docs/src/content/docs/`;
+- CLI surface changes require the CLI reference and a human-facing or
+  agent-facing summary when user-visible behavior changes;
+- Hermes adapter, root plugin shim, and setup-skill changes require Hermes
+  adapter or install docs;
+- tooling and docs-guard policy changes require `AGENTS.md`, environment docs,
+  or this evaluation page;
+- `.devin/wiki.json` must stay valid, use unique page titles, and reference
+  existing priority files.
+
+The guard does not update DeepWiki. DeepWiki is a generated external index: keep
+`.devin/wiki.json` current, then audit the refreshed wiki after merge before
+claiming the public DeepWiki page is current.
 
 ## CLI Smoke Test
 

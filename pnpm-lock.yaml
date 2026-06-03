@@ -50,6 +50,8 @@ importers:
 
   packages/core: {}
 
+  packages/docs-guard: {}
+
   packages/evals:
     dependencies:
       '@agent-memory-os/core':

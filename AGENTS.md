@@ -18,6 +18,18 @@
 - Keep the published docs as an Astro Starlight site under `apps/docs`; do not recreate a second canonical root `docs/` tree.
 - When changing memory behavior, update Starlight docs and deterministic eval fixtures in the same change. Avoid letting `README.md`, `AGENTS.md`, and `apps/docs/src/content/docs/` disagree about implemented phases or commands.
 
+## Documentation Freshness Gate
+
+- Run `pnpm docs:check` before finalizing code, tooling, adapter, or repo-policy changes.
+- The docs guard is strict: code and policy changes fail until the matching documentation surface changes in the same diff.
+- Core, SQLite, eval, router, context-pack, verification, schema, and memory-behavior changes require matching Starlight docs under `apps/docs/src/content/docs/`.
+- CLI surface changes require `apps/docs/src/content/docs/reference/cli-reference.md` and `README.md` or `AGENTS.md` when the change is user-facing.
+- Hermes adapter, root plugin shim, or setup-skill changes require `adapters/hermes/README.md` or `apps/docs/src/content/docs/integrations/hermes-install.md`.
+- Tooling, workflow, package, Node/pnpm/Turbo/Biome/Lefthook, and docs-guard policy changes require `AGENTS.md`, `apps/docs/src/content/docs/start/environment.md`, or `apps/docs/src/content/docs/reference/evaluation.md`.
+- `.devin/wiki.json` must remain valid, use unique page titles, and point `page_notes` priority files at existing paths.
+- Do not use deleted root `docs/*.md` files as canonical docs. Canonical docs live under `apps/docs/src/content/docs/`; retained `docs/research/*.md` source material must only be referenced when the file exists.
+- DeepWiki is generated outside CI. Steer it with `.devin/wiki.json`, then audit the refreshed wiki after merge with DeepWiki MCP before claiming the public index is current.
+
 ## Current Documentation
 
 - Context7 MCP is the preferred source for current framework and library docs in this repo.
@@ -37,6 +49,7 @@
 - Test: `pnpm test`
 - Build: `pnpm build`
 - Docs dev server: `pnpm docs:dev`
+- Docs freshness gate: `pnpm docs:check`
 - Docs build: `pnpm docs:build`
 - Docs preview: `pnpm docs:preview`
 - Eval: `pnpm eval`

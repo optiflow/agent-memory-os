@@ -25,6 +25,7 @@ Node's built-in `node:sqlite` module is a runtime constraint for this repo.
 ```bash
 corepack enable pnpm
 pnpm install
+pnpm docs:check
 pnpm run ci
 ```
 
@@ -60,7 +61,9 @@ Before starting feature work:
 1. Confirm Hermes target version, `plugin.yaml` fields, `register(ctx)`
    discovery, any `initialize(...)` behavior, lifecycle hooks, and tool schema
    registration.
-2. Run `pnpm run ci` from a clean branch.
-3. Build or link the CLI before using memory tools; `meta_memory.status` can
+2. Run `pnpm docs:check` when the planned change touches code, adapter, tooling,
+   workflow, or documentation policy.
+3. Run `pnpm run ci` from a clean branch.
+4. Build or link the CLI before using memory tools; `meta_memory.status` can
    diagnose missing CLI setup.
-4. Keep browser verification out of scope unless a web target is added.
+5. Keep browser verification out of scope unless a web target is added.
