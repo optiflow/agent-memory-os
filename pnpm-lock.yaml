@@ -38,6 +38,15 @@ importers:
 
   packages/core: {}
 
+  packages/evals:
+    dependencies:
+      '@agent-memory-os/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agent-memory-os/sqlite':
+        specifier: workspace:*
+        version: link:../sqlite
+
   packages/sqlite:
     dependencies:
       '@agent-memory-os/core':
