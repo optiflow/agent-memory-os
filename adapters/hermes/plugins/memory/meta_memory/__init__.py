@@ -7,6 +7,7 @@ and context packing; Hermes only needs a Python MemoryProvider-compatible bridge
 from __future__ import annotations
 
 import json
+import math
 import os
 import shlex
 import shutil
@@ -186,6 +187,50 @@ class MetaMemoryProvider(MemoryProvider):
                     **(metadata or {}),
                 },
             },
+        )
+        return None
+
+    def pre_tool_call(
+        self,
+        tool_name: str = "",
+        args: dict[str, Any] | None = None,
+        task_id: str = "",
+        session_id: str = "",
+        **kwargs: Any,
+    ) -> None:
+        self._record_tool_hook(
+            hook_name="pre_tool_call",
+            kind="tool_call",
+            tool_name=tool_name,
+            args=args,
+            task_id=task_id,
+            session_id=session_id,
+            extra=kwargs,
+        )
+        return None
+
+    def post_tool_call(
+        self,
+        tool_name: str = "",
+        args: dict[str, Any] | None = None,
+        result: Any = None,
+        task_id: str = "",
+        duration_ms: int | float | None = None,
+        session_id: str = "",
+        status: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        self._record_tool_hook(
+            hook_name="post_tool_call",
+            kind="tool_result",
+            tool_name=tool_name,
+            args=args,
+            result=result,
+            task_id=task_id,
+            duration_ms=duration_ms,
+            session_id=session_id,
+            status=status,
+            extra=kwargs,
         )
         return None
 
@@ -468,6 +513,55 @@ class MetaMemoryProvider(MemoryProvider):
     def _should_write(self) -> bool:
         return self._agent_context in ("", "primary")
 
+    def _record_tool_hook(
+        self,
+        *,
+        hook_name: str,
+        kind: str,
+        tool_name: str,
+        task_id: str,
+        session_id: str,
+        args: dict[str, Any] | None = None,
+        result: Any = None,
+        duration_ms: int | float | None = None,
+        status: str | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        if not self._should_write() or not self._cli_status()["available"]:
+            return None
+
+        metadata = _compact_metadata(
+            {
+                "hook": hook_name,
+                "toolName": tool_name,
+                "taskId": task_id,
+                "sessionId": session_id or self._session_id or "",
+                "platform": self._platform,
+                "toolCallId": (extra or {}).get("tool_call_id"),
+                "args": args,
+                "result": result,
+                "status": status,
+                "durationMs": duration_ms,
+            }
+        )
+        event_name = "started" if kind == "tool_call" else "finished"
+
+        try:
+            self._run(
+                "remember",
+                {
+                    "dbPath": self._db_path,
+                    "kind": kind,
+                    "actor": "tool",
+                    "content": f"Tool call {event_name}: {tool_name or '(unknown)'}",
+                    "metadata": metadata,
+                },
+            )
+        except RuntimeError:
+            return None
+
+        return None
+
 
 def _read_cli() -> str:
     return _read_cli_config()[0]
@@ -600,6 +694,35 @@ def _process_error(process: subprocess.CompletedProcess[str]) -> str:
     return raw_error
 
 
+def _compact_metadata(values: dict[str, Any]) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    for key, value in values.items():
+        if value in (None, ""):
+            continue
+        metadata[key] = _json_safe(value)
+
+    return metadata
+
+
+def _json_safe(value: Any) -> Any:
+    if value is None or isinstance(value, (bool, str)):
+        return value
+
+    if isinstance(value, int):
+        return value
+
+    if isinstance(value, float):
+        return value if math.isfinite(value) else str(value)
+
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(item) for item in value]
+
+    return str(value)
+
+
 _provider: MetaMemoryProvider | None = None
 
 
@@ -629,9 +752,51 @@ def register(ctx: Any) -> MetaMemoryProvider:
             description=str(schema["description"]),
         )
 
+    ctx.register_hook("pre_tool_call", provider.pre_tool_call)
+    ctx.register_hook("post_tool_call", provider.post_tool_call)
     ctx.register_hook("on_session_end", provider.on_session_end)
     _register_setup_skill(ctx)
     return provider
+
+
+def pre_tool_call(
+    tool_name: str = "",
+    args: dict[str, Any] | None = None,
+    task_id: str = "",
+    session_id: str = "",
+    **kwargs: Any,
+) -> None:
+    provider = _active_provider()
+    provider.pre_tool_call(
+        tool_name=tool_name,
+        args=args,
+        task_id=task_id,
+        session_id=session_id,
+        **kwargs,
+    )
+
+
+def post_tool_call(
+    tool_name: str = "",
+    args: dict[str, Any] | None = None,
+    result: Any = None,
+    task_id: str = "",
+    duration_ms: int | float | None = None,
+    session_id: str = "",
+    status: str | None = None,
+    **kwargs: Any,
+) -> None:
+    provider = _active_provider()
+    provider.post_tool_call(
+        tool_name=tool_name,
+        args=args,
+        result=result,
+        task_id=task_id,
+        duration_ms=duration_ms,
+        session_id=session_id,
+        status=status,
+        **kwargs,
+    )
 
 
 def on_session_end(messages: list[dict[str, Any]] | None = None, **kwargs: Any) -> None:

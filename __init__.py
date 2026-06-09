@@ -39,5 +39,43 @@ def register(ctx: Any) -> MetaMemoryProvider:
     return _adapter.register(ctx)
 
 
+def pre_tool_call(
+    tool_name: str = "",
+    args: dict[str, Any] | None = None,
+    task_id: str = "",
+    session_id: str = "",
+    **kwargs: Any,
+) -> None:
+    return _adapter.pre_tool_call(
+        tool_name=tool_name,
+        args=args,
+        task_id=task_id,
+        session_id=session_id,
+        **kwargs,
+    )
+
+
+def post_tool_call(
+    tool_name: str = "",
+    args: dict[str, Any] | None = None,
+    result: Any = None,
+    task_id: str = "",
+    duration_ms: int | float | None = None,
+    session_id: str = "",
+    status: str | None = None,
+    **kwargs: Any,
+) -> None:
+    return _adapter.post_tool_call(
+        tool_name=tool_name,
+        args=args,
+        result=result,
+        task_id=task_id,
+        duration_ms=duration_ms,
+        session_id=session_id,
+        status=status,
+        **kwargs,
+    )
+
+
 def on_session_end(messages: list[dict[str, Any]] | None = None, **kwargs: Any) -> None:
     return _adapter.on_session_end(messages, **kwargs)

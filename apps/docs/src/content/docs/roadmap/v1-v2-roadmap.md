@@ -32,7 +32,8 @@ local plugin contract and prove it locally:
 - root plugin shim for Git-based Hermes plugin installs;
 - Python `register(ctx)` entrypoint and discovery shape;
 - `initialize(...)` bridge setup;
-- lifecycle hook names and current `on_session_end` registration;
+- lifecycle hook names and current `pre_tool_call`, `post_tool_call`, and
+  `on_session_end` registration;
 - tool schemas and handler registration for `status`, `context_pack`,
   `remember`, `search`, V1.1 session/resource tools, and `verify`;
 - optional setup-skill registration when Hermes exposes `register_skill(...)`;
@@ -73,7 +74,8 @@ These are implemented as local-first, dependency-light projections:
 - browseable workspace/resource tree;
 - richer context-router policy with `auto`, `task`, and `workspace` modes;
 - local adapter smoke fixture for manifest shape, `initialize(...)`,
-  `register(ctx)`, tool schemas, handler delegation, and hook signatures.
+  `register(ctx)`, tool schemas, handler delegation, hook signatures, and
+  observer tool-call evidence writes.
 
 Any later local-first additions must stay auditable and dependency-light.
 Session state and workspace tree work must continue to avoid vector DBs, graph

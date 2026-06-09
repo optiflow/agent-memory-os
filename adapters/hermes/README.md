@@ -36,9 +36,9 @@ Current Hermes documentation describes local plugins with:
 This adapter exposes `initialize(...)` as bridge setup only: read environment,
 prepare CLI and SQLite path configuration, and avoid owning memory behavior.
 The current registration wires the V1/V1.1/V2 Core tools and the
-`on_session_end` hook.
+`pre_tool_call`, `post_tool_call`, and `on_session_end` hooks.
 
-Additional lifecycle hooks should be added only when their Hermes signatures and
+Other lifecycle hooks should be added only when their Hermes signatures and
 local behavior are proven.
 
 The repo-level proof today is local contract alignment and smoke testing. Do not
@@ -112,6 +112,9 @@ matching CLI command.
 | `prefetch` | `context-pack` | Builds a bounded context pack before a turn. |
 | `sync_turn` | `remember` | Appends user and assistant messages asynchronously. |
 | `on_memory_write` | `remember` | Mirrors explicit memory writes. |
+| `pre_tool_call` | `remember` | Appends tool-call evidence before Hermes runs a tool. |
+| `post_tool_call` | `remember` | Appends tool-result evidence after Hermes returns a tool result. |
+| `on_session_end` | none | Keeps a registered no-op session-end hook for Hermes lifecycle compatibility. |
 | `handle_tool_call("status")` | none | Reports adapter configuration without calling the CLI. |
 | `handle_tool_call("context_pack")` | `context-pack` | Manual context-pack inspection. |
 | `handle_tool_call("add_relation")` | `add-relation` | Temporal relation append. |
@@ -124,6 +127,10 @@ matching CLI command.
 | `handle_tool_call("verify")` | `verify` | Verification record append. |
 
 Tool-call arguments cannot override the configured database path.
+
+Tool-call lifecycle hooks are observer writes. They skip writes when the adapter
+is not in the primary agent context or when the CLI is unavailable, and they do
+not block the Hermes tool call if the hook write fails.
 
 ## Smoke Checks
 
@@ -145,8 +152,9 @@ echo "{\"dbPath\":\"$tmp_dir/memory.sqlite\",\"query\":\"Biome formatter\",\"bud
 ```
 
 These checks prove the local adapter, root shim, manifests, `initialize(...)`,
-`register(ctx)`, setup-skill registration fixture, tool schemas, hook
-registration fixture, progressive status diagnostics, and CLI bridge.
+`register(ctx)`, setup-skill registration fixture, tool schemas,
+`pre_tool_call`, `post_tool_call`, and `on_session_end` hook registration
+fixtures, progressive status diagnostics, and CLI bridge.
 
 They do not prove live Hermes plugin discovery, enablement, lifecycle hook
 execution, or production installation for a specific Hermes release.

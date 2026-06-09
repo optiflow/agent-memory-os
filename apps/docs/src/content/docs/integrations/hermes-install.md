@@ -15,7 +15,7 @@ documentation describes:
 
 - `plugin.yaml` metadata;
 - a Python `register(ctx)` entrypoint;
-- lifecycle hooks;
+- `pre_tool_call`, `post_tool_call`, and `on_session_end` lifecycle hooks;
 - tool schemas registered with handlers.
 
 Python is only the Hermes boundary. It maps Hermes calls to the TypeScript CLI
@@ -114,7 +114,8 @@ For a real Hermes checkout, still follow that release's plugin installation path
 and enablement rules. Confirm that Hermes discovers `plugin.yaml`, imports the
 Python module, calls `register(ctx)`, runs any required `initialize(...)` bridge
 setup, registers the setup skill when `register_skill(...)` is available, and
-registers the expected lifecycle hooks and tool schemas.
+registers `pre_tool_call`, `post_tool_call`, `on_session_end`, and the expected
+tool schemas.
 
 Do not treat local smoke output as proof of a live Hermes install.
 
@@ -146,6 +147,19 @@ This proves the adapter can compile, call the TypeScript CLI, and use the
 configured SQLite path locally. It does not prove Hermes plugin discovery,
 enablement, runtime hook execution, or production installation for a specific
 Hermes release.
+
+## Installed Hooks
+
+The adapter advertises and registers these Hermes lifecycle hooks:
+
+- `pre_tool_call` records `tool_call` evidence before Hermes runs a tool.
+- `post_tool_call` records `tool_result` evidence after Hermes returns a tool
+  result.
+- `on_session_end` is a registered no-op compatibility hook.
+
+Tool-call hook writes are opportunistic. They skip writes when the CLI is not
+available or the adapter is not in the primary agent context, and they do not
+block Hermes tool execution if the hook write fails.
 
 ## Installed Tools
 

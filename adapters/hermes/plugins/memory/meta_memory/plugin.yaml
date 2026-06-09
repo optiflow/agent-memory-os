@@ -14,4 +14,6 @@ provides_tools:
   - browse_resources
   - verify
 provides_hooks:
+  - pre_tool_call
+  - post_tool_call
   - on_session_end

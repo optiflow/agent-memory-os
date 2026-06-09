@@ -115,15 +115,17 @@ class MetaMemoryProviderTest(unittest.TestCase):
             "browse_resources",
             "verify",
         ]
+        expected_hooks = ["pre_tool_call", "post_tool_call", "on_session_end"]
 
         self.assertFalse(PLUGIN_JSON_PATH.exists())
         self.assertEqual("meta_memory", metadata["name"])
         self.assertEqual("0.1.0", metadata["version"])
         self.assertEqual("MetaMemoryProvider", metadata["provider_class"])
         self.assertEqual(expected_tools, metadata["provides_tools"])
-        self.assertEqual(["on_session_end"], metadata["provides_hooks"])
+        self.assertEqual(expected_hooks, metadata["provides_hooks"])
         self.assertEqual("meta_memory", root_metadata["name"])
         self.assertEqual(expected_tools, root_metadata["provides_tools"])
+        self.assertEqual(expected_hooks, root_metadata["provides_hooks"])
 
     def test_root_plugin_shim_delegates_to_nested_adapter(self) -> None:
         root_meta_memory = load_module(ROOT_MODULE_PATH, "root_meta_memory_provider")
@@ -152,7 +154,48 @@ class MetaMemoryProviderTest(unittest.TestCase):
             ],
             [tool["name"] for tool in ctx.tools],
         )
+        self.assertEqual({"pre_tool_call", "post_tool_call", "on_session_end"}, set(ctx.hooks))
         self.assertEqual([("agent-memory-os-setup", SETUP_SKILL_PATH)], ctx.skills)
+
+    def test_root_plugin_shim_delegates_module_hook_wrappers(self) -> None:
+        root_meta_memory = load_module(ROOT_MODULE_PATH, "root_meta_memory_provider_hooks")
+
+        with provider_env():
+            provider = root_meta_memory.initialize(session_id="session-root")
+
+        with (
+            patch.object(provider, "pre_tool_call") as pre_tool_call,
+            patch.object(provider, "post_tool_call") as post_tool_call,
+        ):
+            root_meta_memory.pre_tool_call(
+                tool_name="search",
+                args={"query": "Biome"},
+                task_id="task-1",
+            )
+            root_meta_memory.post_tool_call(
+                tool_name="search",
+                args={"query": "Biome"},
+                result='{"results":[]}',
+                task_id="task-1",
+                duration_ms=12,
+                status="success",
+            )
+
+        pre_tool_call.assert_called_once_with(
+            tool_name="search",
+            args={"query": "Biome"},
+            task_id="task-1",
+            session_id="",
+        )
+        post_tool_call.assert_called_once_with(
+            tool_name="search",
+            args={"query": "Biome"},
+            result='{"results":[]}',
+            task_id="task-1",
+            duration_ms=12,
+            session_id="",
+            status="success",
+        )
 
     def test_initialize_creates_provider_and_records_startup_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -191,7 +234,7 @@ class MetaMemoryProviderTest(unittest.TestCase):
             self.assertEqual("hermes_home", provider._db_path_source)
             self.assertTrue(hermes_home.exists())
 
-    def test_register_wires_provider_tools_and_session_end_hook(self) -> None:
+    def test_register_wires_provider_tools_and_lifecycle_hooks(self) -> None:
         with provider_env():
             provider = meta_memory.initialize(session_id="session-123")
 
@@ -215,7 +258,9 @@ class MetaMemoryProviderTest(unittest.TestCase):
             ],
             [tool["name"] for tool in ctx.tools],
         )
-        self.assertEqual({"on_session_end"}, set(ctx.hooks))
+        self.assertEqual({"pre_tool_call", "post_tool_call", "on_session_end"}, set(ctx.hooks))
+        self.assertEqual(ctx.hooks["pre_tool_call"], provider.pre_tool_call)
+        self.assertEqual(ctx.hooks["post_tool_call"], provider.post_tool_call)
         self.assertEqual(ctx.hooks["on_session_end"], provider.on_session_end)
         self.assertEqual([("agent-memory-os-setup", SETUP_SKILL_PATH)], ctx.skills)
 
@@ -425,6 +470,168 @@ class MetaMemoryProviderTest(unittest.TestCase):
             {"action": "add", "target": "memory", "source": "hermes"},
             payload["metadata"],
         )
+
+    def test_pre_tool_call_records_tool_call_evidence(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=["meta-memory", "remember"],
+            returncode=0,
+            stdout=json.dumps({"event": {"id": "event_1"}}),
+            stderr="",
+        )
+        with provider_env():
+            provider = meta_memory.MetaMemoryProvider()
+            provider.initialize(session_id="provider-session", platform="hermes")
+
+        with (
+            patch.object(provider, "_cli_status", return_value={"available": True}),
+            patch.object(meta_memory.subprocess, "run", return_value=completed) as run,
+        ):
+            result = provider.pre_tool_call(
+                tool_name="terminal",
+                args={"cmd": "pnpm test", "dbPath": "/tmp/ignored.sqlite"},
+                task_id="task-1",
+                session_id="session-arg",
+                tool_call_id="call-1",
+            )
+
+        self.assertIsNone(result)
+        self.assertEqual(["meta-memory", "remember"], run.call_args.args[0])
+
+        payload = json.loads(run.call_args.kwargs["input"])
+        self.assertEqual(":memory:", payload["dbPath"])
+        self.assertEqual("tool_call", payload["kind"])
+        self.assertEqual("tool", payload["actor"])
+        self.assertEqual("Tool call started: terminal", payload["content"])
+        self.assertEqual(
+            {
+                "hook": "pre_tool_call",
+                "toolName": "terminal",
+                "taskId": "task-1",
+                "sessionId": "session-arg",
+                "platform": "hermes",
+                "toolCallId": "call-1",
+                "args": {"cmd": "pnpm test", "dbPath": "/tmp/ignored.sqlite"},
+            },
+            payload["metadata"],
+        )
+
+    def test_post_tool_call_records_tool_result_evidence(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=["meta-memory", "remember"],
+            returncode=0,
+            stdout=json.dumps({"event": {"id": "event_1"}}),
+            stderr="",
+        )
+        with provider_env():
+            provider = meta_memory.MetaMemoryProvider()
+            provider.initialize(session_id="provider-session", platform="hermes")
+
+        with (
+            patch.object(provider, "_cli_status", return_value={"available": True}),
+            patch.object(meta_memory.subprocess, "run", return_value=completed) as run,
+        ):
+            result = provider.post_tool_call(
+                tool_name="search",
+                args={"query": "Biome"},
+                result={"results": []},
+                task_id="task-1",
+                duration_ms=12,
+                status="success",
+            )
+
+        self.assertIsNone(result)
+        self.assertEqual(["meta-memory", "remember"], run.call_args.args[0])
+
+        payload = json.loads(run.call_args.kwargs["input"])
+        self.assertEqual(":memory:", payload["dbPath"])
+        self.assertEqual("tool_result", payload["kind"])
+        self.assertEqual("tool", payload["actor"])
+        self.assertEqual("Tool call finished: search", payload["content"])
+        self.assertEqual(
+            {
+                "hook": "post_tool_call",
+                "toolName": "search",
+                "taskId": "task-1",
+                "sessionId": "provider-session",
+                "platform": "hermes",
+                "args": {"query": "Biome"},
+                "result": {"results": []},
+                "status": "success",
+                "durationMs": 12,
+            },
+            payload["metadata"],
+        )
+
+    def test_tool_call_hooks_skip_writes_for_non_primary_agent_context(self) -> None:
+        with provider_env():
+            provider = meta_memory.MetaMemoryProvider()
+            provider.initialize(agent_context="secondary")
+
+        with (
+            patch.object(provider, "_cli_status", return_value={"available": True}),
+            patch.object(meta_memory.subprocess, "run") as run,
+        ):
+            self.assertIsNone(provider.pre_tool_call(tool_name="search", args={}, task_id="task-1"))
+            self.assertIsNone(
+                provider.post_tool_call(tool_name="search", args={}, result="", task_id="task-1")
+            )
+
+        run.assert_not_called()
+
+    def test_tool_call_hooks_skip_writes_when_cli_is_missing(self) -> None:
+        with provider_env(META_MEMORY_CLI="definitely-missing-meta-memory"):
+            provider = meta_memory.MetaMemoryProvider()
+
+        with patch.object(meta_memory.subprocess, "run") as run:
+            self.assertIsNone(provider.pre_tool_call(tool_name="search", args={}, task_id="task-1"))
+            self.assertIsNone(
+                provider.post_tool_call(tool_name="search", args={}, result="", task_id="task-1")
+            )
+
+        run.assert_not_called()
+
+    def test_tool_call_hooks_convert_non_json_values_before_cli_delegation(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=["meta-memory", "remember"],
+            returncode=0,
+            stdout=json.dumps({"event": {"id": "event_1"}}),
+            stderr="",
+        )
+        with provider_env():
+            provider = meta_memory.MetaMemoryProvider()
+
+        with (
+            patch.object(provider, "_cli_status", return_value={"available": True}),
+            patch.object(meta_memory.subprocess, "run", return_value=completed) as run,
+        ):
+            provider.post_tool_call(
+                tool_name="local_file",
+                args={"path": Path("/tmp/input.txt")},
+                result=Path("/tmp/output.txt"),
+                task_id="task-1",
+            )
+
+        payload = json.loads(run.call_args.kwargs["input"])
+        self.assertEqual({"path": "/tmp/input.txt"}, payload["metadata"]["args"])
+        self.assertEqual("/tmp/output.txt", payload["metadata"]["result"])
+
+    def test_tool_call_hooks_do_not_raise_when_cli_write_fails(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=["meta-memory", "remember"],
+            returncode=1,
+            stdout="",
+            stderr=json.dumps({"error": "database locked"}),
+        )
+        with provider_env():
+            provider = meta_memory.MetaMemoryProvider()
+
+        with (
+            patch.object(provider, "_cli_status", return_value={"available": True}),
+            patch.object(meta_memory.subprocess, "run", return_value=completed) as run,
+        ):
+            self.assertIsNone(provider.pre_tool_call(tool_name="search", args={}, task_id="task-1"))
+
+        self.assertEqual(1, run.call_count)
 
     def test_prefetch_delegates_to_context_pack(self) -> None:
         context_pack = {"query": "Biome", "items": []}

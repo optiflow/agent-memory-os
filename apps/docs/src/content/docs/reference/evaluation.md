@@ -137,9 +137,10 @@ pnpm adapter:check
 These commands are local adapter-boundary smoke proof. They cover root and
 nested `plugin.yaml` manifest fixtures, absence of stale JSON metadata, root
 shim delegation, `initialize(...)` bridge setup, `register(ctx)` wiring,
-setup-skill registration when available, the local `on_session_end` hook
-fixture, Hermes `parameters` tool schemas, JSON-string tool results,
-progressive configuration status, and CLI delegation.
+setup-skill registration when available, local `pre_tool_call`,
+`post_tool_call`, and `on_session_end` hook fixtures, Hermes `parameters` tool
+schemas, JSON-string tool results, progressive configuration status, and CLI
+delegation.
 
 Before real Hermes integration testing, verify the target Hermes plugin contract
 against a live checkout. Local fixture coverage does not prove Hermes runtime
@@ -195,7 +196,9 @@ Current local tests cover:
 - CLI seed and context-pack smoke behavior.
 - Hermes adapter metadata uses `plugin.yaml`.
 - Adapter `initialize(...)` and `register(ctx)` wire the provider, V1/V1.1/V2
-  Core tools, setup skill, and `on_session_end` hook in a local fixture.
+  Core tools, setup skill, and lifecycle hooks in a local fixture.
+- Adapter `pre_tool_call` and `post_tool_call` record tool-call and tool-result
+  evidence without blocking Hermes tool execution when hook writes cannot run.
 - Adapter `status` reports missing CLI, env CLI, repo-local CLI fallback, and
   selected database path without calling the CLI.
 - Adapter tool schemas use the Hermes `parameters` shape.
